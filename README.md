@@ -75,3 +75,8 @@ Run the Python script to download and convert:
 
 ## Basic Script and Setup Check
 
+Download <https://raw.githubusercontent.com/azuritecoin/OnnxDiffusersUI/main/txt2img.py> and save the file into your working folder.
+
+Run the Python script and check if any images were generated. NOTE: some warnings may show up but it should be working as long as an output image is generated:  
+`python .\txt2img.py`
+
