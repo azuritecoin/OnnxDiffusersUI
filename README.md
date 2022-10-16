@@ -1,4 +1,4 @@
-# DiffusersOnnxUI
+# OnnxDiffusersUI
 
 I’ve been helping people setup Stable Diffusion and run it on their AMD graphics card on Windows. I’ve also wrote a basic UI for this version. This guide is a consolidation of what I’ve learned and hopefully will help other people setup their PC to run Stable Diffusion too.
 
@@ -14,7 +14,7 @@ A lot of this document is based on other guides. I've listed them below:
 You'll need to install a few things:
 - Python: any version between 3.6 to 3.10 will work. I'll be using 3.10 in this guide
 - Git: used by huggingface-cli for token authentication
-- <huggingface.co> account
+- [huggingface.co](https://huggingface.co) account
 
 To check if they’re installed properly open up command prompt and run the following commands:  
 ```
@@ -48,6 +48,7 @@ pip install transformers
 pip install onnxruntime
 pip install onnx
 pip install torch
+pip install gradio
 ```
 
 Go to <https://aiinfra.visualstudio.com/PublicPackages/_artifacts/feed/ORT-Nightly/PyPI/ort-nightly-directml/overview/> and download the latest version of DirectML for your version of Python. Save the file into your working folder.  
@@ -71,4 +72,6 @@ Go to <https://raw.githubusercontent.com/huggingface/diffusers/main/scripts/conv
 
 Run the Python script to download and convert:  
 `python convert_stable_diffusion_checkpoint_to_onnx.py --model_path="CompVis/stable-diffusion-v1-4" --output_path=".\stable_diffusion_onnx"`
+
+## Basic Script and Setup Check
 
