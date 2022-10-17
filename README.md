@@ -80,7 +80,7 @@ Download <https://raw.githubusercontent.com/azuritecoin/OnnxDiffusersUI/main/txt
 Run the Python script and check if any images were generated in the output folder. NOTE: some warnings may show up but it should be working as long as an output image is generated:  
 `python .\txt2img.py`
 
-If an image was generated and it's not just a blank image then you're ready to generate art! You can use the `txt2img.py` script to input your own prompt:  
+If an image was generated and it's not just a blank image then you're ready to generate art! You can use the `txt2img.py` script to input your own prompt for example:  
 `python .\txt2img.py --prompt="tire swing hanging from a tree" --height=512 --width=512`
 
 ## Running The GUI
@@ -89,6 +89,19 @@ Download <https://raw.githubusercontent.com/azuritecoin/OnnxDiffusersUI/main/onn
 Run the Python script and wait for everything to load:  
 `python .\onnxUI.py`
 
-Once you see "Running on local URL:" open up your browser and go to "127.0.0.1:7860". You should be able to generate images using the web UI. To close the program, go back to the command prompt and hit `ctrl-C`.
+Once you see "Running on local URL:" open up your browser and go to "http[]()://127.0.0.1:7860". You should be able to generate images using the web UI. To close the program, go back to the command prompt and hit `ctrl-C`.
 
+## Using Other Models
+If the model is on the hugging face website and it's using the diffusers library, then you can use the same convert script from the guide. In this example I'll use waifu-diffusion.  
+`python convert_stable_diffusion_checkpoint_to_onnx.py --model_path="hakurei/waifu-diffusion" --output_path="./waifu_diffusion_onnx"`
 
+If the pretrained model is a `.ckpt` file, then you'll need to do a two step conversion. You first will need to convert from .ckpt to diffusers, then from diffusers to ONNX.
+
+Download the following files and the `.ckpt` model of your choice and put them in your working folder:  
+<https://raw.githubusercontent.com/huggingface/diffusers/main/scripts/convert_original_stable_diffusion_to_diffusers.py>  
+<https://raw.githubusercontent.com/CompVis/stable-diffusion/main/configs/stable-diffusion/v1-inference.yaml>
+
+Run two conversion scripts in order, using trinart2_step115000.ckpt in this example:  
+`python convert_original_stable_diffusion_to_diffusers.py --checkpoint_path="./trinart2_step115000.ckpt" --dump_path="./trinart2_step115000_diffusers"`  
+`python convert_stable_diffusion_checkpoint_to_onnx.py --model_path="./trinart2_step115000_diffusers" --output_path="./trinart2_step115000_onnx"`  
+NOTE: make sure the `--dump_path` in the first script and the `--model_path` is the same folder name.
