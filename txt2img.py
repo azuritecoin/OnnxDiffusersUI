@@ -20,10 +20,10 @@ parser.add_argument("--model", dest="model_path", default=".\\stable_diffusion_o
                     help="path to the model directory")
 parser.add_argument("--prompt", dest="prompt", default="a photo of an astronaut riding a horse on mars",
                     help="input text prompt to generate image")
-parser.add_argument("--guidance-scale", dest="guidance_scale", default=7.5, help="guidance value for the generator")
-parser.add_argument("--steps", dest="steps", default=25, help="number of steps for the generator")
-parser.add_argument("--height", dest="height", default=384, help="height of the image")
-parser.add_argument("--width", dest="width", default=384, help="width of the image")
+parser.add_argument("--guidance-scale", type=float, dest="guidance_scale", default=7.5, help="guidance value for the generator")
+parser.add_argument("--steps", dest="steps", type=int, default=25, help="number of steps for the generator")
+parser.add_argument("--height", dest="height", type=int, default=384, help="height of the image")
+parser.add_argument("--width", dest="width", type=int, default=384, help="width of the image")
 parser.add_argument("--seed", dest="seed", default="", help="seed for the generator")
 args = parser.parse_args()
 
