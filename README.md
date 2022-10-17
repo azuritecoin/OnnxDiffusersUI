@@ -77,6 +77,18 @@ Run the Python script to download and convert:
 
 Download <https://raw.githubusercontent.com/azuritecoin/OnnxDiffusersUI/main/txt2img.py> and save the file into your working folder.
 
-Run the Python script and check if any images were generated. NOTE: some warnings may show up but it should be working as long as an output image is generated:  
+Run the Python script and check if any images were generated in the output folder. NOTE: some warnings may show up but it should be working as long as an output image is generated:  
 `python .\txt2img.py`
+
+If an image was generated and it's not just a blank image then you're ready to generate art! You can use the `txt2img.py` script to input your own prompt:  
+`python .\txt2img.py --prompt="tire swing hanging from a tree" --height=512 --width=512`
+
+## Running The GUI
+
+Download <https://raw.githubusercontent.com/azuritecoin/OnnxDiffusersUI/main/onnxUI.py> and save the file into your working folder.
+Run the Python script and wait for everything to load:  
+`python .\onnxUI.py`
+
+Once you see "Running on local URL:" open up your browser and go to "127.0.0.1:7860". You should be able to generate images using the web UI. To close the program, go back to the command prompt and hit `ctrl-C`.
+
 
