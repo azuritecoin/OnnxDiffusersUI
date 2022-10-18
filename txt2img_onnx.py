@@ -20,7 +20,8 @@ parser.add_argument("--model", dest="model_path", default=".\\stable_diffusion_o
                     help="path to the model directory")
 parser.add_argument("--prompt", dest="prompt", default="a photo of an astronaut riding a horse on mars",
                     help="input text prompt to generate image")
-parser.add_argument("--guidance-scale", type=float, dest="guidance_scale", default=7.5, help="guidance value for the generator")
+parser.add_argument("--guidance-scale", type=float, dest="guidance_scale", default=7.5,
+                    help="guidance value for the generator")
 parser.add_argument("--steps", dest="steps", type=int, default=25, help="number of steps for the generator")
 parser.add_argument("--height", dest="height", type=int, default=384, help="height of the image")
 parser.add_argument("--width", dest="width", type=int, default=384, help="width of the image")
@@ -67,6 +68,8 @@ start = time.time()
 images = pipe(args.prompt, height=args.height, width=args.width, num_inference_steps=args.steps,
               guidance_scale=args.guidance_scale, latents=latents).images
 finish = time.time()
+
+images[0].save(os.path.join(output_path, f"{next_index:06}-00.png"))
 
 time_taken = (finish - start) / 60.0
 status = f"Run index {next_index:06} took {time_taken:.1f} minutes to generate an image. seed: {seed}"

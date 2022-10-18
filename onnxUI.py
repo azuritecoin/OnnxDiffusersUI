@@ -3,7 +3,8 @@ import os
 import re
 import time
 
-import diffusers as df
+from diffusers import StableDiffusionOnnxPipeline, DDIMScheduler, LMSDiscreteScheduler, PNDMScheduler
+import diffusers
 import gradio as gr
 import numpy as np
 
@@ -108,15 +109,14 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     model_path = args.model_path
-    scheduler = df.PNDMScheduler(beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear")
-    pipe = df.StableDiffusionOnnxPipeline.from_pretrained(model_path, provider="DmlExecutionProvider",
-                                                          scheduler=scheduler)
+    scheduler = PNDMScheduler(beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear")
+    pipe = StableDiffusionOnnxPipeline.from_pretrained(model_path, provider="DmlExecutionProvider", scheduler=scheduler)
     pipe.safety_checker = lambda images, **kwargs: (images, [False] * len(images))  # Disable the safety checker
 
     # check versions
-    is_DDIM = type(scheduler) == df.DDIMScheduler
-    df_ver = df.__version__.split(".")
-    is_v_0_4 = int(df_ver[1]) >= 4
+    is_DDIM = type(scheduler) == DDIMScheduler
+    diff_ver = diffusers.__version__.split(".")
+    is_v_0_4 = int(diff_ver[1]) >= 4
 
     # create gradio block
     title = "Stable Diffusion ONNX"
