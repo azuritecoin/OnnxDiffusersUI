@@ -1,6 +1,6 @@
 # OnnxDiffusersUI
 
-I’ve been helping people setup Stable Diffusion and run it on their AMD graphics card on Windows. I’ve also wrote a basic UI for this version. This guide is a consolidation of what I’ve learned and hopefully will help other people setup their PC to run Stable Diffusion too.
+I’ve been helping people setup Stable Diffusion and run it on their AMD graphics card (or on CPU) on Windows. I’ve also wrote a basic UI for this version. This guide is a consolidation of what I’ve learned and hopefully will help other people setup their PC to run Stable Diffusion too.
 
 ## Credits
 
@@ -9,7 +9,7 @@ A lot of this document is based on other guides. I've listed them below:
 - https://gist.github.com/harishanand95/75f4515e6187a6aa3261af6ac6f61269#file-stable_diffusion-md
 - https://rentry.org/ayymd-stable-diffustion-v1_4-guide
 
-## Pre-requisites
+## Prerequisites
 
 You'll need to install a few things:
 - Python: any version between 3.6 to 3.10 will work. I'll be using 3.10 in this guide
