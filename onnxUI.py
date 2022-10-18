@@ -116,7 +116,7 @@ if __name__ == "__main__":
     # check versions
     is_DDIM = type(scheduler) == DDIMScheduler
     diff_ver = diffusers.__version__.split(".")
-    is_v_0_4 = int(diff_ver[1]) >= 4
+    is_v_0_4 = (int(diff_ver[0]) > 0) or (int(diff_ver[1]) >= 4)
 
     # create gradio block
     title = "Stable Diffusion ONNX"
