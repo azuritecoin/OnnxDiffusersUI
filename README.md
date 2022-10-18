@@ -114,3 +114,10 @@ NOTE: make sure the `--dump_path` in the first script and the `--model_path` is 
 
 Once you have your newly converted model, you can pass it to the scripts using the `--model` parameter:  
 `python onnxUI.py --model="./waifu_diffusion_onnx"`
+
+## Running Stable Diffusion on CPUs
+
+If you don't have a graphics card with enough VRAM or you only have onboard graphics, you can still run Stable Diffusion with the CPU. Simply change the pipeline initialization from:  
+`pipe = StableDiffusionOnnxPipeline.from_pretrained(model_path, provider="DmlExecutionProvider", scheduler=scheduler)`  
+to:  
+`pipe = StableDiffusionOnnxPipeline.from_pretrained(model_path, provider="CPUExecutionProvider", scheduler=scheduler)`  
