@@ -29,10 +29,10 @@ There shouldn't be any "not recognized as an internal or external command" error
 Start by creating a folder somewhere to store your project. I named mine `stable_diff`. Open up command prompt (or PowerShell) and navigate to your folder.
 
 Create a Python virtual environment:  
-`python -m venv .\virtualenv`
+`python -m venv ./virtualenv`
 
 Activate the virtual environment:  
-`.\virtualenv\Scripts\activate.bat`
+`./virtualenv/Scripts/activate.bat`
 
 At this point you should be in your virtual environment and your prompt should have a `(virtualenv)` at the begining of the line. To exit the virtual environment just run `deactivate` at any time.
 
@@ -71,23 +71,23 @@ Go to <https://huggingface.co/CompVis/stable-diffusion-v1-4> and accept the term
 Go to <https://raw.githubusercontent.com/huggingface/diffusers/main/scripts/convert_stable_diffusion_checkpoint_to_onnx.py> and download the script. Save the file into your working folder. NOTE: make sure you save this as a `.py` file and not as `.py.txt`.
 
 Run the Python script to download and convert:  
-`python convert_stable_diffusion_checkpoint_to_onnx.py --model_path="CompVis/stable-diffusion-v1-4" --output_path=".\stable_diffusion_onnx"`
+`python convert_stable_diffusion_checkpoint_to_onnx.py --model_path="CompVis/stable-diffusion-v1-4" --output_path="./stable_diffusion_onnx"`
 
 ## Basic Script and Setup Check
 
 Download <https://raw.githubusercontent.com/azuritecoin/OnnxDiffusersUI/main/txt2img.py> and save the file into your working folder.
 
 Run the Python script and check if any images were generated in the output folder. NOTE: some warnings may show up but it should be working as long as an output image is generated:  
-`python .\txt2img.py`
+`python ./txt2img.py`
 
 If an image was generated and it's not just a blank image then you're ready to generate art! You can use the `txt2img.py` script to input your own prompt for example:  
-`python .\txt2img.py --prompt="tire swing hanging from a tree" --height=512 --width=512`
+`python ./txt2img.py --prompt="tire swing hanging from a tree" --height=512 --width=512`
 
 ## Running The GUI
 
 Download <https://raw.githubusercontent.com/azuritecoin/OnnxDiffusersUI/main/onnxUI.py> and save the file into your working folder.
 Run the Python script and wait for everything to load:  
-`python .\onnxUI.py`
+`python ./onnxUI.py`
 
 Once you see "Running on local URL:" open up your browser and go to "http[]()://127.0.0.1:7860". You should be able to generate images using the web UI. To close the program, go back to the command prompt and hit `ctrl-C`.
 
@@ -105,3 +105,6 @@ Run two conversion scripts in order, using trinart2_step115000.ckpt in this exam
 `python convert_original_stable_diffusion_to_diffusers.py --checkpoint_path="./trinart2_step115000.ckpt" --dump_path="./trinart2_step115000_diffusers"`  
 `python convert_stable_diffusion_checkpoint_to_onnx.py --model_path="./trinart2_step115000_diffusers" --output_path="./trinart2_step115000_onnx"`  
 NOTE: make sure the `--dump_path` in the first script and the `--model_path` is the same folder name.
+
+Once you have your newly converted model, you can pass it to the scripts using the `--model` parameter:  
+`python ./onnxUI.py --model="./waifu_diffusion_onnx"`
