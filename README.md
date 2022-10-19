@@ -1,6 +1,11 @@
 # OnnxDiffusersUI
 
-I’ve been helping people setup Stable Diffusion and run it on their AMD graphics card (or on CPU) on Windows. I’ve also wrote a basic UI for this version. This guide is a consolidation of what I’ve learned and hopefully will help other people setup their PC to run Stable Diffusion too.
+I’ve been helping people setup Stable Diffusion and run it on their AMD graphics card (or CPU) on Windows. I’ve also wrote a basic UI for the diffusers library version to make it more user friendly. This guide is a consolidation of what I’ve learned and hopefully will help other people setup their PC to run Stable Diffusion too.
+
+The intent of this UI is to get people started running Stable Diffusion on Windows. As such this UI won't be as feature rich as other UI, nor will it be as fast as running Stable Diffusion on Linux and ROCm.
+
+Example screenshot:  
+![example screenshot using waifu diffusion model](images/Screenshot1.png)
 
 ## Credits
 
@@ -11,10 +16,10 @@ A lot of this document is based on other guides. I've listed them below:
 
 ## Prerequisites
 
-You'll need to install a few things:
-- Python: any version between 3.6 to 3.10 will work. I'll be using 3.10 in this guide
-- Git: used by huggingface-cli for token authentication
-- [huggingface.co](https://huggingface.co) account
+You'll need to have a few things prepared first:
+- Install Python: any version between 3.6 to 3.10 will work. I'll be using 3.10 in this guide
+- Install Git: used by huggingface-cli for token authentication
+- Have a [huggingface.co](https://huggingface.co) account
 
 To check if they’re installed properly open up command prompt and run the following commands:  
 ```
@@ -97,8 +102,9 @@ Once you see "Running on local URL:" open up your browser and go to "http[]()://
 
 ## Using Other Models
 
-Install OmegaConf package:  
-`pip install OmegaConf`
+You might need to install OmegaConf and scipy packages:  
+`pip install OmegaConf`  
+`pip install scipy`
 
 If the model is on the hugging face website and it's using the diffusers library, then you can use the same convert script from the guide. In this example I'll use waifu-diffusion.  
 `python convert_stable_diffusion_checkpoint_to_onnx.py --model_path="hakurei/waifu-diffusion" --output_path="./waifu_diffusion_onnx"`
@@ -127,4 +133,4 @@ to:
 
 ## (Optional) Running Other Schedulers
 
-Currently the diffusers library supports PNDM, DDIM, and LMS discrete schedulers. By default the scripts I've provided only uses PNDM. To get the other schedulers working you'll need to modify `pipeline_stable_diffusion_onnx.py` in the diffusers library. See this site: <https://www.travelneil.com/stable-diffusion-updates.html>
+Currently the diffusers library supports PNDM, DDIM, and LMS Discrete schedulers. By default the scripts I've provided only uses PNDM. To get the other schedulers working you'll need to modify `pipeline_stable_diffusion_onnx.py` in the diffusers library. See this site: <https://www.travelneil.com/stable-diffusion-updates.html>
