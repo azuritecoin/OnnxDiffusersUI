@@ -3,7 +3,7 @@ import os
 import re
 import time
 
-from diffusers import StableDiffusionOnnxPipeline, PNDMScheduler
+from diffusers import OnnxStableDiffusionPipeline, PNDMScheduler
 import numpy as np
 
 
@@ -30,7 +30,7 @@ parser.add_argument("--seed", dest="seed", default="", help="seed for the genera
 args = parser.parse_args()
 
 scheduler = PNDMScheduler(beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear")
-pipe = StableDiffusionOnnxPipeline.from_pretrained(
+pipe = OnnxStableDiffusionPipeline.from_pretrained(
     args.model_path, provider="DmlExecutionProvider", scheduler=scheduler)
 pipe.safety_checker = lambda images, **kwargs: (images, [False] * len(images))  # Disable the safety checker
 
