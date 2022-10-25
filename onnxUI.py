@@ -2,11 +2,14 @@ import argparse
 import os
 import re
 import time
+from typing import Union
 
-from diffusers import OnnxStableDiffusionPipeline, DDIMScheduler, LMSDiscreteScheduler, PNDMScheduler
+from diffusers import OnnxStableDiffusionPipeline, OnnxStableDiffusionImg2ImgPipeline
+from diffusers import DDIMScheduler, LMSDiscreteScheduler, PNDMScheduler
 import diffusers
 import gradio as gr
 import numpy as np
+import PIL
 
 
 def get_latents_from_seed(seed: int, batch_size: int, height: int, width: int) -> np.ndarray:
@@ -21,6 +24,7 @@ def get_latents_from_seed(seed: int, batch_size: int, height: int, width: int) -
 def run_diffusers(
     prompt: str,
     neg_prompt: str,
+    init_image: Union[np.ndarray, PIL.Image.Image],
     iteration_count: int,
     batch_size: int,
     steps: int,
@@ -28,6 +32,7 @@ def run_diffusers(
     height: int,
     width: int,
     eta: float,
+    denoise_str: float,
     seed: str,
     image_format: str
 ) -> tuple[list, str]:
@@ -72,14 +77,24 @@ def run_diffusers(
         log.write(info)
         log.close()
 
-        # Generate our own latents so that we can provide a seed.
-        latents = get_latents_from_seed(seeds[i], batch_size, height, width)
+        if type(pipe) is OnnxStableDiffusionPipeline:
+            # Generate our own latents so that we can provide a seed.
+            latents = get_latents_from_seed(seeds[i], batch_size, height, width)
 
-        start = time.time()
-        batch_images = pipe(
-            prompts, negative_prompt=neg_prompts, height=height, width=width, num_inference_steps=steps,
-            guidance_scale=guidance_scale, eta=eta, latents=latents).images
-        finish = time.time()
+            start = time.time()
+            batch_images = pipe(
+                prompts, negative_prompt=neg_prompts, height=height, width=width, num_inference_steps=steps,
+                guidance_scale=guidance_scale, eta=eta, latents=latents).images
+            finish = time.time()
+        elif type(pipe) is OnnxStableDiffusionImg2ImgPipeline:
+            # NOTE: at this time there's no good way of setting the seed for the random noise added by the scheduler
+            # np.random.seed(seeds[i])
+            start = time.time()
+            batch_images = pipe(
+                prompts, negative_prompt=neg_prompts, init_image=init_image, height=height, width=width,
+                num_inference_steps=steps, guidance_scale=guidance_scale, eta=eta, strength=denoise_str,
+                num_images_per_prompt=batch_size).images
+            finish = time.time()
 
         short_prompt = prompt.strip("<>:\"/\\|?*")
         short_prompt = short_prompt[:63] if len(short_prompt) > 64 else short_prompt
@@ -101,27 +116,68 @@ def run_diffusers(
     return images, status
 
 
-def clear_click():
-    return {
-        prompt_t0: "", neg_prompt_t0: "", iter_t0: 1, batch_t0: 1, steps_t0: 16, guid_t0: 7.5, height_t0: 512,
-        width_t0: 512, eta_t0: 0.0, seed_t0: "", fmt_t0: "png"}
+def clear_click(current_tab):
+    if current_tab == 0:
+        return {
+            prompt_t0: "", neg_prompt_t0: "", iter_t0: 1, batch_t0: 1, steps_t0: 16, guid_t0: 7.5, height_t0: 512,
+            width_t0: 512, eta_t0: 0.0, seed_t0: "", fmt_t0: "png"}
+    elif current_tab == 1:
+        return {
+            prompt_t1: "", neg_prompt_t1: "", image_t1: None, iter_t1: 1, batch_t1: 1, steps_t1: 16, guid_t1: 7.5,
+            height_t1: 512, width_t1: 512, eta_t1: 0.0, denoise_t1: 0.8, seed_t1: "", fmt_t1: "png"}
 
 
-def generate_click(*args):
+def generate_click(
+    current_tab, prompt_t0, neg_prompt_t0, iter_t0, batch_t0, steps_t0, guid_t0, height_t0, width_t0, eta_t0, seed_t0,
+    fmt_t0, prompt_t1, neg_prompt_t1, image_t1, iter_t1, batch_t1, steps_t1, guid_t1, height_t1, width_t1, eta_t1,
+    denoise_t1, seed_t1, fmt_t1
+):
     global model_path
     global scheduler
     global pipe
 
-    # create pipeline object or change it
-    if pipe is None or type(pipe) is not OnnxStableDiffusionPipeline:
-        pipe = OnnxStableDiffusionPipeline.from_pretrained(
-            model_path, provider="DmlExecutionProvider", scheduler=scheduler)
-        pipe.safety_checker = lambda images, **kwargs: (images, [False] * len(images))  # Disable the safety checker
-    return run_diffusers(*args)
+    # select which pipeline depending on current tab
+    if current_tab == 0:
+        if type(pipe) is not OnnxStableDiffusionPipeline:
+            pipe = OnnxStableDiffusionPipeline.from_pretrained(
+                model_path, provider="DmlExecutionProvider", scheduler=scheduler)
+            pipe.safety_checker = lambda images, **kwargs: (images, [False] * len(images))
+
+        return run_diffusers(
+            prompt_t0, neg_prompt_t0, None, iter_t0, batch_t0, steps_t0, guid_t0, height_t0, width_t0, eta_t0, 0,
+            seed_t0, fmt_t0)
+    elif current_tab == 1:
+        if type(pipe) is not OnnxStableDiffusionImg2ImgPipeline:
+            pipe = OnnxStableDiffusionImg2ImgPipeline.from_pretrained(
+                model_path, provider="DmlExecutionProvider", scheduler=scheduler)
+            pipe.safety_checker = lambda images, **kwargs: (images, [False] * len(images))
+
+        input_image = image_t1.convert("RGB")
+        input_width, input_height = input_image.size
+        if height_t1 / width_t1 > input_height / input_width:
+            adjust_width = int(input_width * height_t1 / input_height)
+            input_image = input_image.resize((adjust_width, height_t1))
+            left = (adjust_width - width_t1) // 2
+            right = left + width_t1
+            input_image = input_image.crop((left, 0, right, height_t1))
+        else:
+            adjust_height = int(input_height * width_t1 / input_width)
+            input_image = input_image.resize((width_t1, adjust_height))
+            top = (adjust_height - height_t1) // 2
+            bottom = top + height_t1
+            input_image = input_image.crop((0, top, width_t1, bottom))
+
+        return run_diffusers(
+            prompt_t1, neg_prompt_t1, input_image, iter_t1, batch_t1, steps_t1, guid_t1, height_t1, width_t1, eta_t1,
+            denoise_t1, seed_t1, fmt_t1)
 
 
 def select_tab0():
     return 0
+
+
+def select_tab1():
+    return 1
 
 
 if __name__ == "__main__":
@@ -147,7 +203,7 @@ if __name__ == "__main__":
     pipe = None
 
     # check versions
-    is_DDIM = type(scheduler) == DDIMScheduler
+    is_DDIM = type(scheduler) is DDIMScheduler
     diff_ver = diffusers.__version__.split(".")
     is_v_0_4 = (int(diff_ver[0]) > 0) or (int(diff_ver[1]) >= 4)
 
@@ -169,6 +225,20 @@ if __name__ == "__main__":
                     eta_t0 = gr.Slider(0, 1, value=0.0, step=0.01, label="eta", visible=is_DDIM)
                     seed_t0 = gr.Textbox(value="", max_lines=1, label="seed")
                     fmt_t0 = gr.Radio(["png", "jpg"], value="png", label="image format")
+                with gr.Tab(label="img2img") as tab1:
+                    prompt_t1 = gr.Textbox(value="", lines=2, label="prompt")
+                    neg_prompt_t1 = gr.Textbox(value="", lines=2, label="negative prompt", visible=is_v_0_4)
+                    image_t1 = gr.Image(label="input image", type="pil")
+                    iter_t1 = gr.Slider(1, 24, value=1, step=1, label="iteration count")
+                    batch_t1 = gr.Slider(1, 4, value=1, step=1, label="batch size")
+                    steps_t1 = gr.Slider(1, 100, value=16, step=1, label="steps")
+                    guid_t1 = gr.Slider(0, 50, value=7.5, step=0.1, label="guidance")
+                    height_t1 = gr.Slider(384, 768, value=512, step=64, label="height")
+                    width_t1 = gr.Slider(384, 768, value=512, step=64, label="width")
+                    eta_t1 = gr.Slider(0, 1, value=0.0, step=0.01, label="eta", visible=is_DDIM)
+                    denoise_t1 = gr.Slider(0, 1, value=0.8, step=0.01, label="denoise strength")
+                    seed_t1 = gr.Textbox(value="", max_lines=1, label="seed")
+                    fmt_t1 = gr.Radio(["png", "jpg"], value="png", label="image format")
                 with gr.Row():
                     clear_btn = gr.Button("Clear")
                     gen_btn = gr.Button("Generate", variant="primary")
@@ -178,14 +248,16 @@ if __name__ == "__main__":
 
         # config components
         all_inputs = [
-            prompt_t0, neg_prompt_t0, iter_t0, batch_t0, steps_t0, guid_t0, height_t0, width_t0, eta_t0,
-            seed_t0, fmt_t0]
-        clear_btn.click(fn=clear_click, inputs=None, outputs=all_inputs, queue=False)
+            current_tab, prompt_t0, neg_prompt_t0, iter_t0, batch_t0, steps_t0, guid_t0, height_t0, width_t0, eta_t0,
+            seed_t0, fmt_t0, prompt_t1, neg_prompt_t1, image_t1, iter_t1, batch_t1, steps_t1, guid_t1, height_t1,
+            width_t1, eta_t1, denoise_t1, seed_t1, fmt_t1]
+        clear_btn.click(fn=clear_click, inputs=current_tab, outputs=all_inputs, queue=False)
         gen_btn.click(fn=generate_click, inputs=all_inputs, outputs=[image_out, status_out])
 
         image_out.style(grid=2)
 
         tab0.select(fn=select_tab0, inputs=None, outputs=current_tab)
+        tab1.select(fn=select_tab1, inputs=None, outputs=current_tab)
 
     # start gradio web interface on local host
     demo.launch()
