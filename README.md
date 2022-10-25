@@ -50,21 +50,13 @@ First, update `pip`:
 
 Install the following packages:  
 ```
-pip install diffusers==0.5.1
+pip install diffusers
 pip install transformers
 pip install onnxruntime
 pip install onnx
+pip install onnxruntime-directml
 pip install torch
 ```
-
-Go to <https://aiinfra.visualstudio.com/PublicPackages/_artifacts/feed/ORT-Nightly/PyPI/ort-nightly-directml/overview/> and download the latest version of DirectML for your version of Python. Save the file into your working folder.  
-> If you are on Python 3.7 download the file that ends with **-cp37-cp37m-win_amd64.whl  
-> If you are on Python 3.8 download the file that ends with **-cp38-cp38-win_amd64.whl  
-> If you are on Python 3.9 download the file that ends with **-cp39-cp39-win_amd64.whl  
-> If you are on Python 3.10 download the file that ends with **-cp310-cp310-win_amd64.whl  
-
-Install the downloaded file using `pip`. Note the `--force-reinstall` is needed:  
-`pip install ort_nightly_<whatever_version_you_got>.whl --force-reinstall`
 
 ## Download Model and Convert to ONNX
 
