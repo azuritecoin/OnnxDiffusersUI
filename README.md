@@ -105,7 +105,8 @@ If the model is on the hugging face website and it's using the diffusers library
 If the pretrained model is a `.ckpt` file, then you'll need to do a two step conversion. You first will need to convert from .ckpt to diffusers, then from diffusers to ONNX.
 
 Download the following files and the `.ckpt` model of your choice and put them in your working folder:  
-<https://raw.githubusercontent.com/huggingface/diffusers/b9eea06e9fd0d00aedd1948db972a13f7110367d/scripts/convert_original_stable_diffusion_to_diffusers.py>  
+<https://raw.githubusercontent.com/huggingface/diffusers/b9eea06e9fd0d00aedd1948db972a13f7110367d/scripts/convert_original_stable_diffusion_to_diffusers.py>
+<https://raw.githubusercontent.com/huggingface/diffusers/b9eea06e9fd0d00aedd1948db972a13f7110367d/scripts/convert_stable_diffusion_checkpoint_to_onnx.py>
 <https://raw.githubusercontent.com/CompVis/stable-diffusion/main/configs/stable-diffusion/v1-inference.yaml>
 
 Run the first conversion script, using trinart2_step115000.ckpt in this example:  
