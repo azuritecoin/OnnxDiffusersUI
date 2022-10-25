@@ -3,7 +3,7 @@ import os
 import re
 import time
 
-from diffusers import StableDiffusionOnnxPipeline, DDIMScheduler, LMSDiscreteScheduler, PNDMScheduler
+from diffusers import OnnxStableDiffusionPipeline, DDIMScheduler, LMSDiscreteScheduler, PNDMScheduler
 import diffusers
 import gradio as gr
 import numpy as np
@@ -126,7 +126,7 @@ if __name__ == "__main__":
             set_alpha_to_one=False)
     else:
         raise Exception(f"Does not support scheduler with name {args.scheduler}.")
-    pipe = StableDiffusionOnnxPipeline.from_pretrained(
+    pipe = OnnxStableDiffusionPipeline.from_pretrained(
         model_path, provider="DmlExecutionProvider", scheduler=scheduler)
     pipe.safety_checker = lambda images, **kwargs: (images, [False] * len(images))  # Disable the safety checker
 
