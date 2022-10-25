@@ -64,16 +64,16 @@ Login to huggingface:
 `huggingface-cli.exe login`  
 When it prompts you for your token, copy and paste your token from the huggingface website then press enter. NOTE: when pasting, the command prompt looks like nothing has happened. This is normal behaviour, just press enter and it should update.
 
-Go to <https://huggingface.co/CompVis/stable-diffusion-v1-4> and accept the terms for the model.
+Go to <https://huggingface.co/runwayml/stable-diffusion-v1-5> and accept the terms for the model.
 
-Go to <https://raw.githubusercontent.com/huggingface/diffusers/75bb6d2d466d742feb1e2be15f74d2605d11f0e9/scripts/convert_stable_diffusion_checkpoint_to_onnx.py> and download the script. Save the file into your working folder. NOTE: make sure you save this as a `.py` file and not as `.py.txt`.
-
-Run the Python script to download and convert:  
-`python convert_stable_diffusion_checkpoint_to_onnx.py --model_path="CompVis/stable-diffusion-v1-4" --output_path="./stable_diffusion_onnx"`
+Run the following Git command to download and convert:  
+```bash
+git clone https://huggingface.co/runwayml/stable-diffusion-v1-5 --branch onnx --single-branch stable_diffusion_onnx
+```
 
 ## Basic Script and Setup Check
 
-Download <https://raw.githubusercontent.com/azuritecoin/OnnxDiffusersUI/main/txt2img_onnx.py> and save the file into your working folder.
+Download <https://github.com/averad/OnnxDiffusersUI/blob/main/txt2img_onnx.py> and save the file into your working folder.
 
 Run the Python script and check if any images were generated in the output folder. NOTE: some warnings may show up but it should be working as long as an output image is generated:  
 `python txt2img_onnx.py`
@@ -86,7 +86,7 @@ If an image was generated and it's not just a blank image then you're ready to g
 Install the gradio package:  
 `pip install gradio`
 
-Download <https://raw.githubusercontent.com/azuritecoin/OnnxDiffusersUI/main/onnxUI.py> and save the file into your working folder.
+Download <https://github.com/averad/OnnxDiffusersUI/blob/main/onnxUI.py> and save the file into your working folder.
 Run the Python script and wait for everything to load:  
 `python onnxUI.py`
 
