@@ -49,7 +49,7 @@ output_path = "output"
 os.makedirs(output_path, exist_ok=True)
 dir_list = os.listdir(output_path)
 if len(dir_list):
-    pattern = re.compile(r"([0-9][0-9][0-9][0-9][0-9][0-9])-([0-9][0-9])\.\w*")
+    pattern = re.compile(r"([0-9][0-9][0-9][0-9][0-9][0-9])-([0-9][0-9])\..*")
     match_list = [pattern.match(f) for f in dir_list]
     next_index = max([int(m[1]) if m else -1 for m in match_list]) + 1
 else:
