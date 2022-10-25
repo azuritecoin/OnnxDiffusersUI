@@ -13,6 +13,7 @@ A lot of this document is based on other guides. I've listed them below:
 - https://www.travelneil.com/stable-diffusion-windows-amd.html
 - https://gist.github.com/harishanand95/75f4515e6187a6aa3261af6ac6f61269#file-stable_diffusion-md
 - https://rentry.org/ayymd-stable-diffustion-v1_4-guide
+- https://gist.github.com/averad/256c507baa3dcc9464203dc14610d674
 
 ## Prerequisites
 
