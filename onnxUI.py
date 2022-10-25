@@ -18,7 +18,7 @@ def get_latents_from_seed(seed: int, batch_size: int, height: int, width: int) -
 
 
 # gradio function
-def generate(
+def run_diffusers(
     prompt: str,
     neg_prompt: str,
     iteration_count: int,
@@ -31,8 +31,8 @@ def generate(
     seed: str,
     image_format: str
 ) -> tuple[list, str]:
-    global pipe
     global model_path
+    global pipe
 
     # generate seeds for iterations
     if seed == "":
@@ -103,8 +103,25 @@ def generate(
 
 def clear_click():
     return {
-        prompt_txt: "", neg_prompt_txt: "", iter_txt: 1, batch_txt: 1, steps_txt: 16, guid_txt: 7.5, height_txt: 512,
-        width_txt: 512, eta_txt: 0.0, seed_txt: "", fmt_txt: "png"}
+        prompt_t0: "", neg_prompt_t0: "", iter_t0: 1, batch_t0: 1, steps_t0: 16, guid_t0: 7.5, height_t0: 512,
+        width_t0: 512, eta_t0: 0.0, seed_t0: "", fmt_t0: "png"}
+
+
+def generate_click(*args):
+    global model_path
+    global scheduler
+    global pipe
+
+    # create pipeline object or change it
+    if pipe is None or type(pipe) is not OnnxStableDiffusionPipeline:
+        pipe = OnnxStableDiffusionPipeline.from_pretrained(
+            model_path, provider="DmlExecutionProvider", scheduler=scheduler)
+        pipe.safety_checker = lambda images, **kwargs: (images, [False] * len(images))  # Disable the safety checker
+    return run_diffusers(*args)
+
+
+def select_tab0():
+    return 0
 
 
 if __name__ == "__main__":
@@ -115,6 +132,7 @@ if __name__ == "__main__":
         "--scheduler", dest="scheduler", default="PNDM", help="Scheduler used by the pipeline")
     args = parser.parse_args()
 
+    # variables for pipelines
     model_path = args.model_path
     if args.scheduler == "PNDM":
         scheduler = PNDMScheduler(beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear")
@@ -126,9 +144,7 @@ if __name__ == "__main__":
             set_alpha_to_one=False)
     else:
         raise Exception(f"Does not support scheduler with name {args.scheduler}.")
-    pipe = OnnxStableDiffusionPipeline.from_pretrained(
-        model_path, provider="DmlExecutionProvider", scheduler=scheduler)
-    pipe.safety_checker = lambda images, **kwargs: (images, [False] * len(images))  # Disable the safety checker
+    pipe = None
 
     # check versions
     is_DDIM = type(scheduler) == DDIMScheduler
@@ -138,19 +154,21 @@ if __name__ == "__main__":
     # create gradio block
     title = "Stable Diffusion ONNX"
     with gr.Blocks(title=title) as demo:
+        current_tab = gr.State(value=0)
         with gr.Row():
             with gr.Column(scale=1, min_width=600):
-                prompt_txt = gr.Textbox(value="", lines=2, label="prompt")
-                neg_prompt_txt = gr.Textbox(value="", lines=2, label="negative prompt", visible=is_v_0_4)
-                iter_txt = gr.Slider(1, 24, value=1, step=1, label="iteration count")
-                batch_txt = gr.Slider(1, 4, value=1, step=1, label="batch size")
-                steps_txt = gr.Slider(1, 100, value=16, step=1, label="steps")
-                guid_txt = gr.Slider(0, 50, value=7.5, step=0.1, label="guidance")
-                height_txt = gr.Slider(384, 768, value=512, step=64, label="height")
-                width_txt = gr.Slider(384, 768, value=512, step=64, label="width")
-                eta_txt = gr.Slider(0, 1, value=0.0, step=0.01, label="eta", visible=is_DDIM)
-                seed_txt = gr.Textbox(value="", max_lines=1, label="seed")
-                fmt_txt = gr.Radio(["png", "jpg"], value="png", label="image format")
+                with gr.Tab(label="txt2img") as tab0:
+                    prompt_t0 = gr.Textbox(value="", lines=2, label="prompt")
+                    neg_prompt_t0 = gr.Textbox(value="", lines=2, label="negative prompt", visible=is_v_0_4)
+                    iter_t0 = gr.Slider(1, 24, value=1, step=1, label="iteration count")
+                    batch_t0 = gr.Slider(1, 4, value=1, step=1, label="batch size")
+                    steps_t0 = gr.Slider(1, 100, value=16, step=1, label="steps")
+                    guid_t0 = gr.Slider(0, 50, value=7.5, step=0.1, label="guidance")
+                    height_t0 = gr.Slider(384, 768, value=512, step=64, label="height")
+                    width_t0 = gr.Slider(384, 768, value=512, step=64, label="width")
+                    eta_t0 = gr.Slider(0, 1, value=0.0, step=0.01, label="eta", visible=is_DDIM)
+                    seed_t0 = gr.Textbox(value="", max_lines=1, label="seed")
+                    fmt_t0 = gr.Radio(["png", "jpg"], value="png", label="image format")
                 with gr.Row():
                     clear_btn = gr.Button("Clear")
                     gen_btn = gr.Button("Generate", variant="primary")
@@ -160,12 +178,14 @@ if __name__ == "__main__":
 
         # config components
         all_inputs = [
-            prompt_txt, neg_prompt_txt, iter_txt, batch_txt, steps_txt, guid_txt, height_txt, width_txt, eta_txt,
-            seed_txt, fmt_txt]
+            prompt_t0, neg_prompt_t0, iter_t0, batch_t0, steps_t0, guid_t0, height_t0, width_t0, eta_t0,
+            seed_t0, fmt_t0]
         clear_btn.click(fn=clear_click, inputs=None, outputs=all_inputs, queue=False)
-        gen_btn.click(fn=generate, inputs=all_inputs, outputs=[image_out, status_out])
+        gen_btn.click(fn=generate_click, inputs=all_inputs, outputs=[image_out, status_out])
 
         image_out.style(grid=2)
+
+        tab0.select(fn=select_tab0, inputs=None, outputs=current_tab)
 
     # start gradio web interface on local host
     demo.launch()
