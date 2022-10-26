@@ -24,7 +24,7 @@ def get_latents_from_seed(seed: int, batch_size: int, height: int, width: int) -
 def run_diffusers(
     prompt: str,
     neg_prompt: str,
-    init_image: Union[np.ndarray, PIL.Image.Image],
+    init_image: PIL.Image.Image,
     iteration_count: int,
     batch_size: int,
     steps: int,
@@ -135,12 +135,13 @@ def generate_click(
     global model_path
     global scheduler
     global pipe
+    provider="DmlExecutionProvider"
 
     # select which pipeline depending on current tab
     if current_tab == 0:
         if type(pipe) is not OnnxStableDiffusionPipeline:
             pipe = OnnxStableDiffusionPipeline.from_pretrained(
-                model_path, provider="DmlExecutionProvider", scheduler=scheduler)
+                model_path, provider=provider, scheduler=scheduler)
             pipe.safety_checker = lambda images, **kwargs: (images, [False] * len(images))
 
         return run_diffusers(
@@ -149,7 +150,7 @@ def generate_click(
     elif current_tab == 1:
         if type(pipe) is not OnnxStableDiffusionImg2ImgPipeline:
             pipe = OnnxStableDiffusionImg2ImgPipeline.from_pretrained(
-                model_path, provider="DmlExecutionProvider", scheduler=scheduler)
+                model_path, provider=provider, scheduler=scheduler)
             pipe.safety_checker = lambda images, **kwargs: (images, [False] * len(images))
 
         input_image = image_t1.convert("RGB")
