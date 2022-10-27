@@ -13,6 +13,7 @@ A lot of this document is based on other guides. I've listed them below:
 - https://www.travelneil.com/stable-diffusion-windows-amd.html
 - https://gist.github.com/harishanand95/75f4515e6187a6aa3261af6ac6f61269#file-stable_diffusion-md
 - https://rentry.org/ayymd-stable-diffustion-v1_4-guide
+- https://gist.github.com/averad/256c507baa3dcc9464203dc14610d674
 
 ## Prerequisites
 
@@ -50,21 +51,13 @@ First, update `pip`:
 
 Install the following packages:  
 ```
-pip install diffusers==0.5.1
+pip install diffusers==0.6.0
 pip install transformers
 pip install onnxruntime
+pip install onnxruntime-directml
 pip install onnx
 pip install torch
 ```
-
-Go to <https://aiinfra.visualstudio.com/PublicPackages/_artifacts/feed/ORT-Nightly/PyPI/ort-nightly-directml/overview/> and download the latest version of DirectML for your version of Python. Save the file into your working folder.  
-> If you are on Python 3.7 download the file that ends with **-cp37-cp37m-win_amd64.whl  
-> If you are on Python 3.8 download the file that ends with **-cp38-cp38-win_amd64.whl  
-> If you are on Python 3.9 download the file that ends with **-cp39-cp39-win_amd64.whl  
-> If you are on Python 3.10 download the file that ends with **-cp310-cp310-win_amd64.whl  
-
-Install the downloaded file using `pip`. Note the `--force-reinstall` is needed:  
-`pip install ort_nightly_<whatever_version_you_got>.whl --force-reinstall`
 
 ## Download Model and Convert to ONNX
 
@@ -72,12 +65,19 @@ Login to huggingface:
 `huggingface-cli.exe login`  
 When it prompts you for your token, copy and paste your token from the huggingface website then press enter. NOTE: when pasting, the command prompt looks like nothing has happened. This is normal behaviour, just press enter and it should update.
 
-Go to <https://huggingface.co/CompVis/stable-diffusion-v1-4> and accept the terms for the model.
+Go to <https://huggingface.co/runwayml/stable-diffusion-v1-5> and accept the terms for the model.
 
-Go to <https://raw.githubusercontent.com/huggingface/diffusers/75bb6d2d466d742feb1e2be15f74d2605d11f0e9/scripts/convert_stable_diffusion_checkpoint_to_onnx.py> and download the script. Save the file into your working folder. NOTE: make sure you save this as a `.py` file and not as `.py.txt`.
+### Option 1
+
+Go to <https://raw.githubusercontent.com/huggingface/diffusers/89d124945add51b4218cf0a9028a3966cc9dfd47/scripts/convert_stable_diffusion_checkpoint_to_onnx.py> and download the script. Save the file into your working folder. NOTE: make sure you save this as a `.py` file and not as `.py.txt`.
 
 Run the Python script to download and convert:  
-`python convert_stable_diffusion_checkpoint_to_onnx.py --model_path="CompVis/stable-diffusion-v1-4" --output_path="./stable_diffusion_onnx"`
+`python convert_stable_diffusion_checkpoint_to_onnx.py --model_path="runwayml/stable-diffusion-v1-5" --output_path="./stable_diffusion_onnx"`
+
+### Option 2
+
+Althernatively, you could download the pre-converted version of the model using git:  
+`git clone https://huggingface.co/runwayml/stable-diffusion-v1-5 --branch onnx --single-branch stable_diffusion_onnx`
 
 ## Basic Script and Setup Check
 
@@ -103,8 +103,10 @@ Once you see "Running on local URL:" open up your browser and go to "http[]()://
 ## Using Other Models
 
 You might need to install OmegaConf and scipy packages:  
-`pip install OmegaConf`  
-`pip install scipy`
+```
+pip install OmegaConf
+pip install scipy
+```
 
 If the model is on the hugging face website and it's using the diffusers library, then you can use the same convert script from the guide. In this example I'll use waifu-diffusion.  
 `python convert_stable_diffusion_checkpoint_to_onnx.py --model_path="hakurei/waifu-diffusion" --output_path="./waifu_diffusion_onnx"`
@@ -112,7 +114,8 @@ If the model is on the hugging face website and it's using the diffusers library
 If the pretrained model is a `.ckpt` file, then you'll need to do a two step conversion. You first will need to convert from .ckpt to diffusers, then from diffusers to ONNX.
 
 Download the following files and the `.ckpt` model of your choice and put them in your working folder:  
-<https://raw.githubusercontent.com/huggingface/diffusers/b9eea06e9fd0d00aedd1948db972a13f7110367d/scripts/convert_original_stable_diffusion_to_diffusers.py>  
+<https://raw.githubusercontent.com/huggingface/diffusers/89d124945add51b4218cf0a9028a3966cc9dfd47/scripts/convert_stable_diffusion_checkpoint_to_onnx.py>  
+<https://raw.githubusercontent.com/huggingface/diffusers/d9cfe325a53502641f16ce4f839391c5b0d0a684/scripts/convert_original_stable_diffusion_to_diffusers.py>  
 <https://raw.githubusercontent.com/CompVis/stable-diffusion/main/configs/stable-diffusion/v1-inference.yaml>
 
 Run the first conversion script, using trinart2_step115000.ckpt in this example:  
