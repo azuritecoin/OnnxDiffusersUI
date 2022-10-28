@@ -133,16 +133,16 @@ def generate_click(
     width_t1, eta_t1, denoise_t1, seed_t1, fmt_t1
 ):
     global model_path
+    global provider
     global scheduler
     global pipe
-    provider = "DmlExecutionProvider"
 
     # select which schedule and pipeline depending on current tab
     if current_tab == 0:
         if sch_t0 == "PNDM" and type(scheduler) is not PNDMScheduler:
             scheduler = PNDMScheduler(beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear")
         elif sch_t0 == "LMS" and type(scheduler) is not LMSDiscreteScheduler:
-            scheduler = LMSDiscreteScheduler(beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear")
+            scheduler = LMSDiscreteScheduler( beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear")
         elif sch_t0 == "DDIM" and type(scheduler) is not DDIMScheduler:
             scheduler = DDIMScheduler(
                 beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear", clip_sample=False,
@@ -215,11 +215,13 @@ def choose_sch(sched_name: str):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="gradio interface for ONNX based Stable Diffusion")
     parser.add_argument(
-        "--model", dest="model_path", default="./stable_diffusion_onnx", help="path to the model directory")
+        "--model", default="./stable_diffusion_onnx", help="path to the model directory")
+    parser.add_argument("--cpu-only", action="store_true", default=False, help="run ONNX with CPU")
     args = parser.parse_args()
 
     # variables for ONNX pipelines
-    model_path = args.model_path
+    model_path = args.model
+    provider = "CPUExecutionProvider" if args.cpu_only else "DmlExecutionProvider"
     scheduler = None
     pipe = None
 

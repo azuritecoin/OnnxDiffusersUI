@@ -27,11 +27,13 @@ parser.add_argument("--steps", dest="steps", type=int, default=25, help="number 
 parser.add_argument("--height", dest="height", type=int, default=384, help="height of the image")
 parser.add_argument("--width", dest="width", type=int, default=384, help="width of the image")
 parser.add_argument("--seed", dest="seed", default="", help="seed for the generator")
+parser.add_argument("--cpu-only", action="store_true", default=False, help="run ONNX with CPU")
 args = parser.parse_args()
 
+provider = "CPUExecutionProvider" if args.cpu_only else "DmlExecutionProvider"
 scheduler = PNDMScheduler(beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear")
 pipe = OnnxStableDiffusionPipeline.from_pretrained(
-    args.model_path, provider="DmlExecutionProvider", scheduler=scheduler)
+    args.model_path, provider=provider, scheduler=scheduler)
 pipe.safety_checker = lambda images, **kwargs: (images, [False] * len(images))  # Disable the safety checker
 
 # generate seeds for iterations
