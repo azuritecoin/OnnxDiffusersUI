@@ -5,9 +5,9 @@ I’ve been helping people setup Stable Diffusion and run it on their AMD graphi
 The intent of this UI is to get people started running Stable Diffusion on Windows. As such this UI won't be as feature rich as other UI, nor will it be as fast as running Stable Diffusion on Linux and ROCm.
 
 **WIP Update:** Known issues:
-- There's been a bug where DDIM and LMS schedulers will cause an error. See [this update](https://github.com/huggingface/diffusers/pull/932) for a fix.
+- There's been a bug where DDIM and LMS schedulers will cause an error. See [this issue page](https://github.com/huggingface/diffusers/issues/967)
 - img2img output is sub-standard on PNDM scheduler, not sure if this is expected
-- the seed input for img2img does not generate the same image
+- the seed input for img2img does not generate the same image. See [this this page](https://github.com/huggingface/diffusers/pull/932)
 
 Example screenshot:  
 ![example screenshot using waifu diffusion model](images/Screenshot1.png)
@@ -47,7 +47,7 @@ Activate the virtual environment:
 
 At this point you should be in your virtual environment and your prompt should have a `(virtualenv)` at the begining of the line. To exit the virtual environment just run `deactivate` at any time.
 
-To restart the virtual environment after closing the command prompt window, `cd` back into the working folder and run the `.\virtualenv\Scripts\activate.bat` batch file again.
+To restart the virtual environment after closing the command prompt window, `cd` back into the `stable_diff` folder and run the `.\virtualenv\Scripts\activate.bat` batch file again.
 
 ## Installing Packages
 
@@ -74,7 +74,7 @@ Go to <https://huggingface.co/runwayml/stable-diffusion-v1-5> and accept the ter
 
 ### Option 1
 
-Go to <https://raw.githubusercontent.com/huggingface/diffusers/89d124945add51b4218cf0a9028a3966cc9dfd47/scripts/convert_stable_diffusion_checkpoint_to_onnx.py> and download the script. Save the file into your working folder. NOTE: make sure you save this as a `.py` file and not as `.py.txt`.
+Go to <https://raw.githubusercontent.com/huggingface/diffusers/89d124945add51b4218cf0a9028a3966cc9dfd47/scripts/convert_stable_diffusion_checkpoint_to_onnx.py> and download the script. Save the file into your `stable_diff` folder. NOTE: make sure you save this as a `.py` file and not as `.py.txt`.
 
 Run the Python script to download and convert:  
 `python convert_stable_diffusion_checkpoint_to_onnx.py --model_path="runwayml/stable-diffusion-v1-5" --output_path="./stable_diffusion_onnx"`
@@ -86,7 +86,7 @@ Althernatively, you could download the pre-converted version of the model using 
 
 ## Basic Script and Setup Check
 
-Download <https://raw.githubusercontent.com/azuritecoin/OnnxDiffusersUI/main/txt2img_onnx.py> and save the file into your working folder.
+Download <https://raw.githubusercontent.com/azuritecoin/OnnxDiffusersUI/main/txt2img_onnx.py> and save the file into your `stable_diff` folder.
 
 Run the Python script and check if any images were generated in the output folder. NOTE: some warnings may show up but it should be working as long as an output image is generated:  
 `python txt2img_onnx.py`
@@ -118,7 +118,7 @@ If the model is on the hugging face website and it's using the diffusers library
 
 If the pretrained model is a `.ckpt` file, then you'll need to do a two step conversion. You first will need to convert from .ckpt to diffusers, then from diffusers to ONNX.
 
-Download the following files and the `.ckpt` model of your choice and put them in your working folder:  
+Download the following files and the `.ckpt` model of your choice and put them in your `stable_diff` folder:  
 <https://raw.githubusercontent.com/huggingface/diffusers/89d124945add51b4218cf0a9028a3966cc9dfd47/scripts/convert_stable_diffusion_checkpoint_to_onnx.py>  
 <https://raw.githubusercontent.com/huggingface/diffusers/d9cfe325a53502641f16ce4f839391c5b0d0a684/scripts/convert_original_stable_diffusion_to_diffusers.py>  
 <https://raw.githubusercontent.com/CompVis/stable-diffusion/main/configs/stable-diffusion/v1-inference.yaml>
@@ -139,8 +139,81 @@ If you don't have a graphics card with enough VRAM or you only have onboard grap
 to:  
 `pipe = StableDiffusionOnnxPipeline.from_pretrained(model_path, provider="CPUExecutionProvider", scheduler=scheduler)`  
 
-## (Optional) Running Other Schedulers
+## Running Other Schedulers
 
-Currently the diffusers library supports PNDM, DDIM, and LMS Discrete schedulers. By default the scripts I've provided only uses PNDM. To get the other schedulers working you'll need to modify `pipeline_stable_diffusion_onnx.py` in the diffusers library. See this site: <https://www.travelneil.com/stable-diffusion-updates.html>
+**WIP Update:** There has been an [issue raised](https://github.com/huggingface/diffusers/issues/967) to fix the bug but it's not in v0.6.0.
 
-**WIP Update:** There has been an [update](https://github.com/huggingface/diffusers/pull/932) to fix the bugs while running other schedulers but it's not in v0.6.0.
+Currently the diffusers library supports PNDM, DDIM, and LMS Discrete schedulers. By default the scripts I've provided only uses PNDM. In the mean time you can edit the diffusers library directly. There's two file you need to modify: `pipeline_onnx_stable_diffusion.py` and `pipeline_onnx_stable_diffusion_img2img.py`
+
+### Editing `pipeline_onnx_stable_diffusion.py`
+
+Go open the first file in notepad `stable_diff\virtualenv\Lib\site-packages\diffusers\pipelines\stable_diffusion\pipeline_onnx_stable_diffusion.py`.
+
+- On line 4, this line:  
+```python
+import numpy as np
+```  
+add this line underneath:  
+```python
+import numpy as np
+import torch
+```
+
+- On line 153 change this:  
+```python
+latents = latents * self.scheduler.init_noise_sigma
+```  
+to this:  
+```python
+latents = latents * np.array(self.scheduler.init_noise_sigma)
+```
+
+- On line 171 change this:  
+```python
+sample=latent_model_input, timestep=np.array([t]), encoder_hidden_states=text_embeddings
+```  
+to this:  
+```python
+sample=latent_model_input, timestep=np.array([t], dtype=np.int64), encoder_hidden_states=text_embeddings
+```
+
+- On line 181, this line:  
+```python
+latents = self.scheduler.step(noise_pred, t, latents, **extra_step_kwargs).prev_sample
+```  
+add this line above:  
+```python
+latents = torch.tensor(latents)
+latents = self.scheduler.step(noise_pred, t, latents, **extra_step_kwargs).prev_sample
+```
+
+### Editing `pipeline_onnx_stable_diffusion_img2img.py`
+
+Go open the second file in notepad `stable_diff\virtualenv\Lib\site-packages\diffusers\pipelines\stable_diffusion\pipeline_onnx_stable_diffusion_img2img.py`.
+
+- On line 327 change this:  
+```python
+sample=latent_model_input, timestep=np.array([t]), encoder_hidden_states=text_embeddings
+```  
+to this:  
+```python
+sample=latent_model_input, timestep=np.array([t], dtype=np.int64), encoder_hidden_states=text_embeddings
+```
+
+- On line 336, this line:  
+```python
+latents = self.scheduler.step(noise_pred, t, latents, **extra_step_kwargs).prev_sample
+```  
+add this line above:  
+```python
+latents = torch.tensor(latents)
+latents = self.scheduler.step(noise_pred, t, latents, **extra_step_kwargs).prev_sample
+```
+
+### Undoing Your Changes
+
+If you messed something up editing the two files, you need to re-install diffusers using `pip`:  
+```
+pip uninstall diffusers
+pip install diffusers==0.6.0
+```
