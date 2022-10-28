@@ -4,7 +4,10 @@ I’ve been helping people setup Stable Diffusion and run it on their AMD graphi
 
 The intent of this UI is to get people started running Stable Diffusion on Windows. As such this UI won't be as feature rich as other UI, nor will it be as fast as running Stable Diffusion on Linux and ROCm.
 
-**WIP Update:** I added img2img, but the default PNDM scheduler is not well suited for img2img. There has been an update to support other schedulers [in this update](https://github.com/huggingface/diffusers/pull/932) but it's not in v0.6.0.
+**WIP Update:** Known issues:
+- There's been a bug where DDIM and LMS schedulers will cause an error. See [this update](https://github.com/huggingface/diffusers/pull/932) for a fix.
+- img2img output is sub-standard on PNDM scheduler, not sure if this is expected
+- the seed input for img2img does not generate the same image
 
 Example screenshot:  
 ![example screenshot using waifu diffusion model](images/Screenshot1.png)
@@ -140,4 +143,4 @@ to:
 
 Currently the diffusers library supports PNDM, DDIM, and LMS Discrete schedulers. By default the scripts I've provided only uses PNDM. To get the other schedulers working you'll need to modify `pipeline_stable_diffusion_onnx.py` in the diffusers library. See this site: <https://www.travelneil.com/stable-diffusion-updates.html>
 
-**WIP Update:** I added img2img, but the default PNDM scheduler is not well suited for img2img. There has been an update to support other schedulers [in this update](https://github.com/huggingface/diffusers/pull/932) but it's not in v0.6.0.
+**WIP Update:** There has been an [update](https://github.com/huggingface/diffusers/pull/932) to fix the bugs while running other schedulers but it's not in v0.6.0.
