@@ -10,7 +10,7 @@ The intent of this UI is to get people started running Stable Diffusion on Windo
 - the seed input for img2img does not generate the same image. See [this this page](https://github.com/huggingface/diffusers/pull/932)
 
 Example screenshot:  
-![example screenshot using waifu diffusion model](images/Screenshot1.png)
+![example screenshot using waifu diffusion model](images/Screenshot2.png)
 
 ## Credits
 
