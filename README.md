@@ -54,11 +54,10 @@ To restart the virtual environment after closing the command prompt window, `cd`
 First, update `pip`:  
 `python -m pip install --upgrade pip`
 
-Download the requirements file and save it into your `stable_diff` folder: <https://raw.githubusercontent.com/azuritecoin/OnnxDiffusersUI/main/requirements.txt>  
-Then install the requirements using this command
-```
-pip install -r requirements.txt
-```
+Download the requirements file and save it into your `stable_diff` folder: <https://raw.githubusercontent.com/azuritecoin/OnnxDiffusersUI/main/requirements.txt>
+
+Then install the requirements using this command:  
+`pip install -r requirements.txt`
 
 ## Download Model and Convert to ONNX
 
