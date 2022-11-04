@@ -54,14 +54,10 @@ To restart the virtual environment after closing the command prompt window, `cd`
 First, update `pip`:  
 `python -m pip install --upgrade pip`
 
-Install the following packages:  
+Download the requirements file and save it into your `stable_diff` folder: <https://raw.githubusercontent.com/azuritecoin/OnnxDiffusersUI/main/requirements.txt>  
+Then install the requirements using this command
 ```
-pip install diffusers==0.6.0
-pip install transformers
-pip install onnxruntime
-pip install onnxruntime-directml
-pip install onnx
-pip install torch
+pip install -r requirements.txt
 ```
 
 ## Download Model and Convert to ONNX
@@ -96,9 +92,6 @@ If an image was generated and it's not just a blank image then you're ready to g
 
 ## Running The GUI
 
-Install the gradio package:  
-`pip install gradio`
-
 Download <https://raw.githubusercontent.com/azuritecoin/OnnxDiffusersUI/main/onnxUI.py> and save the file into your working folder.
 Run the Python script and wait for everything to load:  
 `python onnxUI.py`
@@ -106,12 +99,6 @@ Run the Python script and wait for everything to load:
 Once you see "Running on local URL:" open up your browser and go to "http[]()://127.0.0.1:7860". You should be able to generate images using the web UI. To close the program, go back to the command prompt and hit `ctrl-C`.
 
 ## Using Other Models
-
-You might need to install OmegaConf and scipy packages:  
-```
-pip install OmegaConf
-pip install scipy
-```
 
 If the model is on the hugging face website and it's using the diffusers library, then you can use the same convert script from the guide. In this example I'll use waifu-diffusion.  
 `python convert_stable_diffusion_checkpoint_to_onnx.py --model_path="hakurei/waifu-diffusion" --output_path="./waifu_diffusion_onnx"`
