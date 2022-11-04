@@ -1,8 +1,6 @@
-wget
 diffusers==0.6.0
 transformers
 onnxruntime
-onnxruntime-directml
 onnx
 torch
 gradio

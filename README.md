@@ -39,8 +39,14 @@ There shouldn't be any "not recognized as an internal or external command" error
 
 Start by creating a folder somewhere to store your project. I named mine `stable_diff`. Open up command prompt (or PowerShell) and navigate to your folder.
 
-Create a Python virtual environment:  
-`python -m venv virtualenv`
+Download the `setup.bat` file and save it into your `stable_diff` folder: <https://raw.githubusercontent.com/azuritecoin/OnnxDiffusersUI/main/setup.bat>  
+Note: make sure you save the file as a `.bat` file and not a `.bat.txt` file.
+
+Open command prompt and navigate to your `stable_diff` folder:  
+`cd <path to your stable_diff folder>`
+
+Run the `setup.bat` file:  
+`.\setup.bat`
 
 Activate the virtual environment:  
 `.\virtualenv\Scripts\activate.bat`
@@ -48,16 +54,6 @@ Activate the virtual environment:
 At this point you should be in your virtual environment and your prompt should have a `(virtualenv)` at the begining of the line. To exit the virtual environment just run `deactivate` at any time.
 
 To restart the virtual environment after closing the command prompt window, `cd` back into the `stable_diff` folder and run the `.\virtualenv\Scripts\activate.bat` batch file again.
-
-## Installing Packages
-
-First, update `pip`:  
-`python -m pip install --upgrade pip`
-
-Download the requirements file and save it into your `stable_diff` folder: <https://raw.githubusercontent.com/azuritecoin/OnnxDiffusersUI/main/requirements.txt>
-
-Then install the requirements using this command:  
-`pip install -r requirements.txt`
 
 ## Download Model and Convert to ONNX
 

@@ -39,6 +39,9 @@ def run_diffusers(
     global model_path
     global pipe
 
+    prompt.strip("\n")
+    neg_prompt.strip("\n")
+
     # generate seeds for iterations
     if seed == "":
         rng = np.random.default_rng()
@@ -96,7 +99,7 @@ def run_diffusers(
                 num_images_per_prompt=batch_size).images
             finish = time.time()
 
-        short_prompt = prompt.strip("<>:\"/\\|?*")
+        short_prompt = prompt.strip("<>:\"/\\|?*\n\t")
         short_prompt = short_prompt[:63] if len(short_prompt) > 64 else short_prompt
         for j in range(batch_size):
             batch_images[j].save(os.path.join(output_path, f"{next_index+i:06}-{j:02}.{short_prompt}.{image_format}"))
