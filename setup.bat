@@ -32,33 +32,45 @@ python -m venv %venv_path%
 
 :ActivateVirtEnv
 call %venv_path%\Scripts\activate.bat
-:: using wget from python library instead of standalone wget for Windows
-if not exist %venv_path%\Lib\site-packages\wget.py pip install wget
 
 :: for the first run, get requirements and install packages
 if %first_run%==0 goto ScriptDownload
+python -m pip install --upgrade pip
+pip install wheel
+:: using wget from python library instead of standalone wget for Windows
+pip install wget
 
 echo installing Python packages
 if not exist requirements.txt python -m wget https://raw.githubusercontent.com/azuritecoin/OnnxDiffusersUI/main/requirements.txt
 pip install -r requirements.txt
+:: install onnxruntime-directml separately
+pip install "protobuf<=3.20.1" onnxruntime-directml
+:: install latest version of protobuf v3.x
+pip install --no-deps --ignore-installed "protobuf<4"
 
 :ScriptDownload
 if not exist onnxUI.py python -m wget https://raw.githubusercontent.com/azuritecoin/OnnxDiffusersUI/main/onnxUI.py
 
 :: update the python packages and redownload onnxUI.py
+if %first_run% NEQ 0 goto FinishSetup
 if %update%==0 goto FinishSetup
+python -m pip install --upgrade pip
+pip install -U wget wheel
+pip uninstall --yes protobuf
 if exist requirements.txt del requirements.txt
 python -m wget https://raw.githubusercontent.com/azuritecoin/OnnxDiffusersUI/main/requirements.txt
 pip install -U -r requirements.txt
+pip install -U "protobuf<=3.20.1" onnxruntime-directml
+pip install --no-deps --ignore-installed "protobuf<4"
 
 if exist onnxUI.py del onnxUI.py
 python -m wget https://raw.githubusercontent.com/azuritecoin/OnnxDiffusersUI/main/onnxUI.py
 
 :FinishSetup
-deactivate
 echo setup complete
 pause
-goto:eof
+deactivate
+goto :eof
 
 
 :NoPython
@@ -75,4 +87,4 @@ goto CheckError
 
 :CheckError
 pause
-goto:eof
+goto :eof
