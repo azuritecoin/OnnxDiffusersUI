@@ -114,6 +114,8 @@ Then run the second conversion script:
 `python convert_stable_diffusion_checkpoint_to_onnx.py --model_path="./trinart2_step115000_diffusers" --output_path="model/trinart2_step115000_onnx"`  
 NOTE: make sure the `--dump_path` in the first script and the `--model_path` is the same folder name.
 
+### After Conversion
+
 Once you have your newly converted model, you can pass it to the scripts using the `--model` parameter:  
 `python onnxUI.py --model="model/waifu_diffusion_onnx"`
 
