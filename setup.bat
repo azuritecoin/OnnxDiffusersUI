@@ -2,6 +2,7 @@
 
 set first_run=0
 set venv_path="virtualenv"
+set model_path="model"
 
 :: check if programs are installed
 python --version 1> NUL 2> NUL
@@ -50,6 +51,19 @@ pip install --no-deps --ignore-installed "protobuf<4"
 
 :ScriptDownload
 if not exist onnxUI.py python -m wget https://raw.githubusercontent.com/azuritecoin/OnnxDiffusersUI/main/onnxUI.py
+if not exist txt2img_onnx.py python -m wget https://raw.githubusercontent.com/azuritecoin/OnnxDiffusersUI/main/txt2img_onnx.py
+
+if not exist convert_original_stable_diffusion_to_diffusers.py (
+    python -m wget https://raw.githubusercontent.com/huggingface/diffusers/v0.6.0/scripts/convert_original_stable_diffusion_to_diffusers.py -o convert_original_stable_diffusion_to_diffusers.py
+)
+if not exist convert_stable_diffusion_checkpoint_to_onnx.py (
+    python -m wget https://raw.githubusercontent.com/huggingface/diffusers/v0.6.0/scripts/convert_stable_diffusion_checkpoint_to_onnx.py -o convert_stable_diffusion_checkpoint_to_onnx.py
+)
+if not exist v1-inference.yaml (
+    python -m wget https://raw.githubusercontent.com/CompVis/stable-diffusion/main/configs/stable-diffusion/v1-inference.yaml -o v1-inference.yaml
+)
+
+if not exist %model_path% mkdir %model_path%
 
 :: update the python packages and redownload onnxUI.py
 if %first_run% NEQ 0 goto FinishSetup
@@ -65,6 +79,14 @@ pip install --no-deps --ignore-installed "protobuf<4"
 
 if exist onnxUI.py del onnxUI.py
 python -m wget https://raw.githubusercontent.com/azuritecoin/OnnxDiffusersUI/main/onnxUI.py
+if exist txt2img_onnx.py del txt2img_onnx.py
+python -m wget https://raw.githubusercontent.com/azuritecoin/OnnxDiffusersUI/main/txt2img_onnx.py
+if exist convert_original_stable_diffusion_to_diffusers.py del convert_original_stable_diffusion_to_diffusers.py
+python -m wget https://raw.githubusercontent.com/huggingface/diffusers/v0.6.0/scripts/convert_original_stable_diffusion_to_diffusers.py -o convert_original_stable_diffusion_to_diffusers.py
+if exist convert_stable_diffusion_checkpoint_to_onnx.py del convert_stable_diffusion_checkpoint_to_onnx.py
+python -m wget https://raw.githubusercontent.com/huggingface/diffusers/v0.6.0/scripts/convert_stable_diffusion_checkpoint_to_onnx.py -o convert_stable_diffusion_checkpoint_to_onnx.py
+if exist v1-inference.yaml del v1-inference.yaml
+python -m wget https://raw.githubusercontent.com/CompVis/stable-diffusion/main/configs/stable-diffusion/v1-inference.yaml -o v1-inference.yaml
 
 :FinishSetup
 echo setup complete

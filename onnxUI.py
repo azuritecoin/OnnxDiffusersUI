@@ -218,7 +218,7 @@ def choose_sch(sched_name: str):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="gradio interface for ONNX based Stable Diffusion")
     parser.add_argument(
-        "--model", default="./stable_diffusion_onnx", help="path to the model directory")
+        "--model", default="model/stable_diffusion_onnx", help="path to the model directory")
     parser.add_argument("--cpu-only", action="store_true", default=False, help="run ONNX with CPU")
     args = parser.parse_args()
 
