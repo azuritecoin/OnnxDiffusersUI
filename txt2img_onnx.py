@@ -17,7 +17,7 @@ def get_latents_from_seed(seed: int, batch_size: int, height: int, width: int) -
 
 parser = argparse.ArgumentParser(description="simple interface for ONNX based Stable Diffusion")
 parser.add_argument(
-    "--model", dest="model_path", default=".\\stable_diffusion_onnx", help="path to the model directory")
+    "--model", dest="model_path", default="model/stable_diffusion_onnx", help="path to the model directory")
 parser.add_argument(
     "--prompt", dest="prompt", default="a photo of an astronaut riding a horse on mars",
     help="input text prompt to generate image")
