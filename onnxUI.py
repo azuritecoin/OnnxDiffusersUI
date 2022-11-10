@@ -38,6 +38,7 @@ def run_diffusers(
 ) -> Tuple[list, str]:
     global model_path
     global pipe
+    global pipetype
 
     prompt.strip("\n")
     neg_prompt.strip("\n")
@@ -80,7 +81,7 @@ def run_diffusers(
         log.write(info)
         log.close()
 
-        if type(pipe) is OnnxStableDiffusionPipeline:
+        if pipetype == "OnnxStableDiffusionPipeline":
             # Generate our own latents so that we can provide a seed.
             latents = get_latents_from_seed(seeds[i], batch_size, height, width)
 
@@ -89,7 +90,7 @@ def run_diffusers(
                 prompts, negative_prompt=neg_prompts, height=height, width=width, num_inference_steps=steps,
                 guidance_scale=guidance_scale, eta=eta, latents=latents).images
             finish = time.time()
-        elif type(pipe) is OnnxStableDiffusionImg2ImgPipeline:
+        elif pipetype == "OnnxStableDiffusionImg2ImgPipeline":
             # NOTE: at this time there's no good way of setting the seed for the random noise added by the scheduler
             # np.random.seed(seeds[i])
             start = time.time()
@@ -139,6 +140,7 @@ def generate_click(
     global provider
     global scheduler
     global pipe
+    global pipetype
 
     # select which schedule and pipeline depending on current tab
     if current_tab == 0:
@@ -151,9 +153,10 @@ def generate_click(
                 beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear", clip_sample=False,
                 set_alpha_to_one=False)
 
-        if type(pipe) is not OnnxStableDiffusionPipeline:
+        if pipetype != "OnnxStableDiffusionPipeline":
+            pipetype = "OnnxStableDiffusionPipeline"
             pipe = OnnxStableDiffusionPipeline.from_pretrained(
-                model_path, provider=provider, scheduler=scheduler)
+                model_path, provider=provider, scheduler=scheduler, custom_pipeline="lpw_stable_diffusion_onnx")
             pipe.safety_checker = lambda images, **kwargs: (images, [False] * len(images))
 
         if type(pipe.scheduler) is not type(scheduler):
@@ -172,7 +175,8 @@ def generate_click(
                 beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear", clip_sample=False,
                 set_alpha_to_one=False)
 
-        if type(pipe) is not OnnxStableDiffusionImg2ImgPipeline:
+        if pipetype != "OnnxStableDiffusionImg2ImgPipeline":
+            pipetype = "OnnxStableDiffusionImg2ImgPipeline"
             pipe = OnnxStableDiffusionImg2ImgPipeline.from_pretrained(
                 model_path, provider=provider, scheduler=scheduler)
             pipe.safety_checker = lambda images, **kwargs: (images, [False] * len(images))
@@ -227,6 +231,7 @@ if __name__ == "__main__":
     provider = "CPUExecutionProvider" if args.cpu_only else "DmlExecutionProvider"
     scheduler = None
     pipe = None
+    pipetype = None
 
     # check versions
     diff_ver = diffusers.__version__.split(".")
@@ -299,4 +304,3 @@ if __name__ == "__main__":
     # use the following to launch the web interface to a private network
     # demo.queue(concurrency_count=1)
     # demo.launch(server_name="0.0.0.0")
-
