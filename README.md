@@ -62,11 +62,24 @@ At this point you should be in your virtual environment and your prompt should h
 
 To restart the virtual environment after closing the command prompt window, `cd` back into the `stable_diff` folder and run the `.\virtualenv\Scripts\activate.bat` batch file again.
 
-## Download Model and Convert to ONNX
+## Logging in Using Your Token
 
 Login to huggingface:  
 `huggingface-cli.exe login`  
-When it prompts you for your token, copy and paste your token from the huggingface website then press enter. NOTE: when pasting, the command prompt looks like nothing has happened. This is normal behaviour, just press enter and it should update.
+![step1](images/login1.png)
+
+Go to the [tokens page](https://huggingface.co/settings/tokens) of the huggingface website and copy your token.  
+![step2](images/login2.png)
+
+Go back to the command prompt window. Make sure there's no characters selected (see below). Press `Esc` to de-select.  
+![step3](images/login3.png)
+
+Right click the Title Bar -> Edit -> Paste -> Press `Enter`. You should be logged in at this point.  
+![step4](images/login4.png)
+
+NOTE: when pasting, the command prompt will look like nothing has happened. This is normal behaviour, just press enter and it should update.
+
+## Download Model and Convert to ONNX
 
 Go to <https://huggingface.co/runwayml/stable-diffusion-v1-5> and accept the terms and conditions for the model.
 
