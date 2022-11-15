@@ -101,7 +101,7 @@ Once you see "Running on local URL:" open up your browser and go to "http[]()://
 
 ### Models Using Diffuers
 
-If the model is on the hugging face website and it's using the diffusers library, then you can use the same convert script from the guide. In this example I'll use waifu-diffusion.  
+If the model is on the hugging face website and it's using the diffusers library, then you can use the same convert script from the guide. Make sure you've accepted the terms for any new model. In this example I'll use waifu-diffusion.  
 `python convert_stable_diffusion_checkpoint_to_onnx.py --model_path="hakurei/waifu-diffusion" --output_path="model/waifu_diffusion_onnx"`
 
 ### Models Using `.ckpt`
@@ -116,8 +116,7 @@ NOTE: make sure the `--dump_path` in the first script and the `--model_path` is 
 
 ### After Conversion
 
-Once you have your newly converted model, you can pass it to the scripts using the `--model` parameter:  
-`python onnxUI.py --model="model/waifu_diffusion_onnx"`
+Once you have your newly converted model, make sure the model is saved into the `model` folder (create one if it doesn't exist). Once you restarted the UI, select the model from the dropdown menu on the top left.
 
 ## Running Stable Diffusion on CPUs
 
