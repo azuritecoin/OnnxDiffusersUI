@@ -1,4 +1,5 @@
 import argparse
+import gc
 import os
 import re
 import time
@@ -6,9 +7,10 @@ from typing import Tuple
 
 from diffusers import OnnxStableDiffusionPipeline, OnnxStableDiffusionImg2ImgPipeline
 from diffusers import DDIMScheduler, LMSDiscreteScheduler, PNDMScheduler
-import diffusers
+from diffusers import __version__ as _df_version
 import gradio as gr
 import numpy as np
+from packaging import version
 import PIL
 
 
@@ -36,7 +38,8 @@ def run_diffusers(
     seed: str,
     image_format: str
 ) -> Tuple[list, str]:
-    global model_path
+    global model_name
+    global current_pipe
     global pipe
 
     prompt.strip("\n")
@@ -75,12 +78,12 @@ def run_diffusers(
     for i in range(iteration_count):
         log = open(os.path.join(output_path, "history.txt"), "a")
         info = f"{next_index+i:06} | prompt: {prompt} negative prompt: {neg_prompt} | scheduler: {sched_name} " + \
-            f"model: {model_path} iteration size: {iteration_count} batch size: {batch_size} steps: {steps} " + \
+            f"model: {model_name} iteration size: {iteration_count} batch size: {batch_size} steps: {steps} " + \
             f"scale: {guidance_scale} height: {height} width: {width} eta: {eta} seed: {seeds[i]} \n"
         log.write(info)
         log.close()
 
-        if type(pipe) is OnnxStableDiffusionPipeline:
+        if current_pipe == "txt2img":
             # Generate our own latents so that we can provide a seed.
             latents = get_latents_from_seed(seeds[i], batch_size, height, width)
 
@@ -89,7 +92,7 @@ def run_diffusers(
                 prompts, negative_prompt=neg_prompts, height=height, width=width, num_inference_steps=steps,
                 guidance_scale=guidance_scale, eta=eta, latents=latents).images
             finish = time.time()
-        elif type(pipe) is OnnxStableDiffusionImg2ImgPipeline:
+        elif current_pipe == "img2img":
             # NOTE: at this time there's no good way of setting the seed for the random noise added by the scheduler
             # np.random.seed(seeds[i])
             start = time.time()
@@ -119,7 +122,8 @@ def run_diffusers(
     return images, status
 
 
-def clear_click(current_tab):
+def clear_click():
+    global current_tab
     if current_tab == 0:
         return {
             prompt_t0: "", neg_prompt_t0: "", sch_t0: "PNDM", iter_t0: 1, batch_t0: 1, steps_t0: 16,
@@ -131,30 +135,45 @@ def clear_click(current_tab):
 
 
 def generate_click(
-    current_tab, prompt_t0, neg_prompt_t0, sch_t0, iter_t0, batch_t0, steps_t0, guid_t0, height_t0, width_t0, eta_t0,
+    model_drop, prompt_t0, neg_prompt_t0, sch_t0, iter_t0, batch_t0, steps_t0, guid_t0, height_t0, width_t0, eta_t0,
     seed_t0, fmt_t0, prompt_t1, neg_prompt_t1, image_t1, sch_t1, iter_t1, batch_t1, steps_t1, guid_t1, height_t1,
     width_t1, eta_t1, denoise_t1, seed_t1, fmt_t1
 ):
-    global model_path
+    global model_name
     global provider
+    global current_tab
+    global current_pipe
     global scheduler
     global pipe
+    
+    # reset scheduler and pipeline if model is different
+    if model_name != model_drop:
+        model_name = model_drop
+        scheduler = None
+        pipe = None
+    model_path = os.path.join("model", model_name)
 
-    # select which schedule and pipeline depending on current tab
+    # select which scheduler depending on current tab
     if current_tab == 0:
-        if sch_t0 == "PNDM" and type(scheduler) is not PNDMScheduler:
-            scheduler = PNDMScheduler(beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear")
-        elif sch_t0 == "LMS" and type(scheduler) is not LMSDiscreteScheduler:
-            scheduler = LMSDiscreteScheduler( beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear")
-        elif sch_t0 == "DDIM" and type(scheduler) is not DDIMScheduler:
-            scheduler = DDIMScheduler(
-                beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear", clip_sample=False,
-                set_alpha_to_one=False)
+        sched_name = sch_t0
+    else:
+        sched_name = sch_t1
 
-        if type(pipe) is not OnnxStableDiffusionPipeline:
+    if sched_name == "PNDM" and type(scheduler) is not PNDMScheduler:
+        scheduler = PNDMScheduler.from_config(model_path, subfolder="scheduler")
+    elif sched_name == "LMS" and type(scheduler) is not LMSDiscreteScheduler:
+        scheduler = LMSDiscreteScheduler.from_config(model_path, subfolder="scheduler")
+    elif sched_name == "DDIM" and type(scheduler) is not DDIMScheduler:
+        scheduler = DDIMScheduler.from_config(model_path, subfolder="scheduler")
+
+    # select which pipeline depending on current tab
+    if current_tab == 0:
+        if current_pipe != "txt2img" or pipe is None:
             pipe = OnnxStableDiffusionPipeline.from_pretrained(
                 model_path, provider=provider, scheduler=scheduler)
             pipe.safety_checker = lambda images, **kwargs: (images, [False] * len(images))
+            gc.collect()
+        current_pipe = "txt2img"
 
         if type(pipe.scheduler) is not type(scheduler):
             pipe.scheduler = scheduler
@@ -163,23 +182,17 @@ def generate_click(
             prompt_t0, neg_prompt_t0, None, iter_t0, batch_t0, steps_t0, guid_t0, height_t0, width_t0, eta_t0, 0,
             seed_t0, fmt_t0)
     elif current_tab == 1:
-        if sch_t1 == "PNDM" and type(scheduler) is not PNDMScheduler:
-            scheduler = PNDMScheduler(beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear")
-        elif sch_t1 == "LMS" and type(scheduler) is not LMSDiscreteScheduler:
-            scheduler = LMSDiscreteScheduler(beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear")
-        elif sch_t1 == "DDIM" and type(scheduler) is not DDIMScheduler:
-            scheduler = DDIMScheduler(
-                beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear", clip_sample=False,
-                set_alpha_to_one=False)
-
-        if type(pipe) is not OnnxStableDiffusionImg2ImgPipeline:
+        if current_pipe != "img2img" or pipe is None:
             pipe = OnnxStableDiffusionImg2ImgPipeline.from_pretrained(
                 model_path, provider=provider, scheduler=scheduler)
             pipe.safety_checker = lambda images, **kwargs: (images, [False] * len(images))
+            gc.collect()
+        current_pipe = "img2img"
 
         if type(pipe.scheduler) is not type(scheduler):
             pipe.scheduler = scheduler
 
+        # input image resizing
         input_image = image_t1.convert("RGB")
         input_width, input_height = input_image.size
         if height_t1 / width_t1 > input_height / input_width:
@@ -201,11 +214,13 @@ def generate_click(
 
 
 def select_tab0():
-    return 0
+    global current_tab
+    current_tab = 0
 
 
 def select_tab1():
-    return 1
+    global current_tab
+    current_tab = 1
 
 
 def choose_sch(sched_name: str):
@@ -217,28 +232,44 @@ def choose_sch(sched_name: str):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="gradio interface for ONNX based Stable Diffusion")
-    parser.add_argument(
-        "--model", default="model/stable_diffusion_onnx", help="path to the model directory")
     parser.add_argument("--cpu-only", action="store_true", default=False, help="run ONNX with CPU")
     args = parser.parse_args()
 
     # variables for ONNX pipelines
-    model_path = args.model
+    model_name = None
     provider = "CPUExecutionProvider" if args.cpu_only else "DmlExecutionProvider"
+    current_tab = 0
+    current_pipe = "txt2img"
+
+    # diffusers objects
     scheduler = None
     pipe = None
 
     # check versions
-    diff_ver = diffusers.__version__.split(".")
-    is_v_0_4 = (int(diff_ver[0]) > 0) or (int(diff_ver[1]) >= 4)
-    is_v_0_6 = (int(diff_ver[0]) > 0) or (int(diff_ver[1]) >= 6)
+    is_v_0_4 = version.parse(_df_version) >= version.parse("0.4.0")
+    is_v_0_6 = version.parse(_df_version) >= version.parse("0.6.0")
+
+    # custom css
+    custom_css = """
+    #gen_button {height: 100px}
+    """
+
+    # search the model folder
+    model_dir = "model"
+    model_list = []
+    with os.scandir(model_dir) as scan_it:
+        for entry in scan_it:
+            if entry.is_dir():
+                model_list.append(entry.name)
+    default_model = model_list[0] if len(model_list) > 0 else None
 
     # create gradio block
     title = "Stable Diffusion ONNX"
-    with gr.Blocks(title=title) as demo:
-        current_tab = gr.State(value=0)
+    with gr.Blocks(title=title, css=custom_css) as demo:
         with gr.Row():
             with gr.Column(scale=1, min_width=600):
+                with gr.Row():
+                    model_drop = gr.Dropdown(model_list, value=default_model, label="model folder", interactive=True)
                 with gr.Tab(label="txt2img") as tab0:
                     prompt_t0 = gr.Textbox(value="", lines=2, label="prompt")
                     neg_prompt_t0 = gr.Textbox(value="", lines=2, label="negative prompt", visible=is_v_0_4)
@@ -269,23 +300,23 @@ if __name__ == "__main__":
                     denoise_t1 = gr.Slider(0, 1, value=0.8, step=0.01, label="denoise strength")
                     seed_t1 = gr.Textbox(value="", max_lines=1, label="seed")
                     fmt_t1 = gr.Radio(["png", "jpg"], value="png", label="image format")
-                with gr.Row():
-                    clear_btn = gr.Button("Clear")
-                    gen_btn = gr.Button("Generate", variant="primary")
             with gr.Column(scale=1, min_width=600):
+                with gr.Row():
+                    gen_btn = gr.Button("Generate", variant="primary", elem_id="gen_button")
+                    clear_btn = gr.Button("Clear", elem_id="gen_button")
                 image_out = gr.Gallery(value=None, label="images")
                 status_out = gr.Textbox(value="", label="status")
 
         # config components
         all_inputs = [
-            current_tab, prompt_t0, neg_prompt_t0, sch_t0, iter_t0, batch_t0, steps_t0, guid_t0, height_t0, width_t0,
+            model_drop, prompt_t0, neg_prompt_t0, sch_t0, iter_t0, batch_t0, steps_t0, guid_t0, height_t0, width_t0,
             eta_t0, seed_t0, fmt_t0, prompt_t1, neg_prompt_t1, image_t1, sch_t1, iter_t1, batch_t1, steps_t1, guid_t1,
             height_t1, width_t1, eta_t1, denoise_t1, seed_t1, fmt_t1]
-        clear_btn.click(fn=clear_click, inputs=current_tab, outputs=all_inputs, queue=False)
+        clear_btn.click(fn=clear_click, inputs=None, outputs=all_inputs, queue=False)
         gen_btn.click(fn=generate_click, inputs=all_inputs, outputs=[image_out, status_out])
 
-        tab0.select(fn=select_tab0, inputs=None, outputs=current_tab)
-        tab1.select(fn=select_tab1, inputs=None, outputs=current_tab)
+        tab0.select(fn=select_tab0, inputs=None, outputs=None)
+        tab1.select(fn=select_tab1, inputs=None, outputs=None)
 
         sch_t0.change(fn=choose_sch, inputs=sch_t0, outputs=eta_t0, queue=False)
         sch_t1.change(fn=choose_sch, inputs=sch_t1, outputs=eta_t1, queue=False)
