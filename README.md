@@ -25,7 +25,7 @@ A lot of this document is based on other guides. I've listed them below:
 You'll need to have a few things prepared first:
 - Install Python 3.10: <https://www.python.org/downloads/release/python-3108/>
     - NOTE: don't install the version of Python from the Microsoft Store
-    - make sure that you enable "add Python to PATH" during the install
+    - make sure that you enable "add Python to environment variables/PATH" during the install
 - Install Git for Windows: <https://git-scm.com/download/win>
     - just install with the default recommended settings
 - Have a [huggingface.co](https://huggingface.co) account
