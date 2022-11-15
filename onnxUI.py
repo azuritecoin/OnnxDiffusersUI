@@ -261,6 +261,7 @@ if __name__ == "__main__":
         for entry in scan_it:
             if entry.is_dir():
                 model_list.append(entry.name)
+    default_model = model_list[0] if len(model_list) > 0 else None
 
     # create gradio block
     title = "Stable Diffusion ONNX"
@@ -268,7 +269,7 @@ if __name__ == "__main__":
         with gr.Row():
             with gr.Column(scale=1, min_width=600):
                 with gr.Row():
-                    model_drop = gr.Dropdown(model_list, label="model folder", interactive=True)
+                    model_drop = gr.Dropdown(model_list, value=default_model, label="model folder", interactive=True)
                 with gr.Tab(label="txt2img") as tab0:
                     prompt_t0 = gr.Textbox(value="", lines=2, label="prompt")
                     neg_prompt_t0 = gr.Textbox(value="", lines=2, label="negative prompt", visible=is_v_0_4)
