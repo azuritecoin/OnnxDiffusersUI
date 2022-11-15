@@ -34,7 +34,7 @@ def run_diffusers(
     height: int,
     width: int,
     eta: float,
-    denoise_str: float,
+    denoise_strength: float,
     seed: str,
     image_format: str
 ) -> Tuple[list, str]:
@@ -76,12 +76,13 @@ def run_diffusers(
     images = []
     time_taken = 0
     for i in range(iteration_count):
-        log = open(os.path.join(output_path, "history.txt"), "a")
         info = f"{next_index+i:06} | prompt: {prompt} negative prompt: {neg_prompt} | scheduler: {sched_name} " + \
             f"model: {model_name} iteration size: {iteration_count} batch size: {batch_size} steps: {steps} " + \
-            f"scale: {guidance_scale} height: {height} width: {width} eta: {eta} seed: {seeds[i]} \n"
-        log.write(info)
-        log.close()
+            f"scale: {guidance_scale} height: {height} width: {width} eta: {eta} seed: {seeds[i]}"
+        if (current_pipe == "img2img"):
+            info = info + f" denoise: {denoise_strength}"
+        with open(os.path.join(output_path, "history.txt"), "a") as log:
+            log.write(info + "\n")
 
         if current_pipe == "txt2img":
             # Generate our own latents so that we can provide a seed.
@@ -98,12 +99,12 @@ def run_diffusers(
             start = time.time()
             batch_images = pipe(
                 prompts, negative_prompt=neg_prompts, init_image=init_image, height=height, width=width,
-                num_inference_steps=steps, guidance_scale=guidance_scale, eta=eta, strength=denoise_str,
+                num_inference_steps=steps, guidance_scale=guidance_scale, eta=eta, strength=denoise_strength,
                 num_images_per_prompt=batch_size).images
             finish = time.time()
 
         short_prompt = prompt.strip("<>:\"/\\|?*\n\t")
-        short_prompt = short_prompt[:63] if len(short_prompt) > 64 else short_prompt
+        short_prompt = short_prompt[:99] if len(short_prompt) > 100 else short_prompt
         for j in range(batch_size):
             batch_images[j].save(os.path.join(output_path, f"{next_index+i:06}-{j:02}.{short_prompt}.{image_format}"))
 

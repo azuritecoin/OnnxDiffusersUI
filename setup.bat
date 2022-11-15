@@ -44,9 +44,9 @@ pip install wget
 echo installing Python packages
 if not exist requirements.txt python -m wget https://raw.githubusercontent.com/azuritecoin/OnnxDiffusersUI/main/requirements.txt
 pip install -r requirements.txt
-:: install onnxruntime-directml separately
+:: install onnxruntime-directml separately after onnxruntime to enable DmlExecutionProvider
 pip install "protobuf<=3.20.1" onnxruntime-directml
-:: install latest version of protobuf v3.x
+:: install latest version of protobuf v3.x NOTE: onnx package offically supports upto protobuf 3.20.1
 pip install --no-deps --ignore-installed "protobuf<4"
 
 :ScriptDownload
@@ -70,7 +70,8 @@ if %first_run% NEQ 0 goto FinishSetup
 if %update%==0 goto FinishSetup
 python -m pip install --upgrade pip
 pip install -U wget wheel
-pip uninstall --yes protobuf
+:: need to uninstall these two packages to upgrade
+pip uninstall --yes protobuf onnxruntime-directml
 if exist requirements.txt del requirements.txt
 python -m wget https://raw.githubusercontent.com/azuritecoin/OnnxDiffusersUI/main/requirements.txt
 pip install -U -r requirements.txt

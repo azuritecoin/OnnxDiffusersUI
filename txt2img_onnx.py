@@ -58,11 +58,10 @@ else:
     next_index = 0
 
 sched_name = str(pipe.scheduler._class_name)
-log = open(os.path.join(output_path, "history.txt"), "a")
 info = f"{next_index:06} | prompt: {args.prompt} | scheduler: {sched_name} model: {args.model_path} steps: " + \
-       f"{args.steps} scale: {args.guidance_scale} height: {args.height} width: {args.width} seed: {seed} \n"
-log.write(info)
-log.close()
+       f"{args.steps} scale: {args.guidance_scale} height: {args.height} width: {args.width} seed: {seed}\n"
+with open(os.path.join(output_path, "history.txt"), "a") as log:
+    log.write(info)
 
 # Generate our own latents so that we can provide a seed.
 latents = get_latents_from_seed(seed, 1, args.height, args.width)
