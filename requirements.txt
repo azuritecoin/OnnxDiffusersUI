@@ -1,4 +1,4 @@
-diffusers==0.6.0
+git+https://github.com/huggingface/diffusers.git
 transformers
 onnxruntime
 onnx
@@ -7,3 +7,4 @@ gradio
 scipy
 ftfy
 OmegaConf
+spacy
