@@ -23,13 +23,7 @@ def get_latents_from_seed(seed: int, batch_size: int, height: int, width: int) -
     image_latents = rng.standard_normal(latents_shape).astype(np.float32)
     return image_latents
 
-pndm = PNDMScheduler.from_pretrained(model, subfolder="scheduler")
-lms = LMSDiscreteScheduler.from_pretrained(model, subfolder="scheduler")
-ddim = DDIMScheduler.from_pretrained(model, subfolder="scheduler")
-ddpm = DDPMScheduler.from_pretrained(model, subfolder="scheduler")
-euler = EulerDiscreteScheduler.from_pretrained(model, subfolder="scheduler")
-eulera = EulerAncestralDiscreteScheduler.from_pretrained(model, subfolder="scheduler")
-dpms = DPMSolverMultistepScheduler.from_pretrained(model, subfolder="scheduler")
+
 
 parser = argparse.ArgumentParser(description="simple interface for ONNX based Stable Diffusion")
 parser.add_argument(
@@ -44,13 +38,21 @@ parser.add_argument("--height", dest="height", type=int, default=384, help="heig
 parser.add_argument("--width", dest="width", type=int, default=384, help="width of the image")
 parser.add_argument("--seed", dest="seed", default="", help="seed for the generator")
 parser.add_argument("--cpu-only", action="store_true", default=False, help="run ONNX with CPU")
+args = parser.parse_args()
+pndm = PNDMScheduler.from_pretrained(args.model_path, subfolder="scheduler")
+lms = LMSDiscreteScheduler.from_pretrained(args.model_path, subfolder="scheduler")
+ddim = DDIMScheduler.from_pretrained(args.model_path, subfolder="scheduler")
+ddpm = DDPMScheduler.from_pretrained(args.model_path, subfolder="scheduler")
+euler = EulerDiscreteScheduler.from_pretrained(args.model_path, subfolder="scheduler")
+eulera = EulerAncestralDiscreteScheduler.from_pretrained(args.model_path, subfolder="scheduler")
+dpms = DPMSolverMultistepScheduler.from_pretrained(args.model_path, subfolder="scheduler")
 parser.add_argument("--scheduler", dest="scheduler", default=pndm, help="schedulers: pndm, lms, ddim, ddpm, euler, eulera, dpms")
 args = parser.parse_args()
 
+
 provider = "CPUExecutionProvider" if args.cpu_only else "DmlExecutionProvider"
-scheduler = PNDMScheduler.from_config(model_path, subfolder="scheduler")
 pipe = OnnxStableDiffusionPipeline.from_pretrained(
-    args.model_path, provider=provider, scheduler=scheduler, safety_checker=None)
+    args.model_path, provider=provider, scheduler=args.scheduler, safety_checker=None)
 
 # generate seeds for iterations
 if args.seed == "":
