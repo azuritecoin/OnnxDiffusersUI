@@ -187,8 +187,7 @@ def generate_click(
     if current_tab == 0:
         if current_pipe != "txt2img" or pipe is None:
             pipe = OnnxStableDiffusionPipeline.from_pretrained(
-                model_path, provider=provider, scheduler=scheduler)
-            pipe.safety_checker = lambda images, **kwargs: (images, [False] * len(images))
+                model_path, provider=provider, scheduler=scheduler, safety_checker=None)
             gc.collect()
         current_pipe = "txt2img"
 
@@ -201,8 +200,7 @@ def generate_click(
     elif current_tab == 1:
         if current_pipe != "img2img" or pipe is None:
             pipe = OnnxStableDiffusionImg2ImgPipeline.from_pretrained(
-                model_path, provider=provider, scheduler=scheduler)
-            pipe.safety_checker = lambda images, **kwargs: (images, [False] * len(images))
+                model_path, provider=provider, scheduler=scheduler, safety_checker=None)
             gc.collect()
         current_pipe = "img2img"
 
