@@ -3,7 +3,16 @@ import os
 import re
 import time
 
-from diffusers import OnnxStableDiffusionPipeline, PNDMScheduler
+from diffusers import OnnxStableDiffusionPipeline
+from diffusers import (
+    DDPMScheduler,
+    DDIMScheduler,
+    PNDMScheduler,
+    LMSDiscreteScheduler,
+    EulerDiscreteScheduler,
+    EulerAncestralDiscreteScheduler,
+    DPMSolverMultistepScheduler
+)
 import numpy as np
 
 
@@ -13,6 +22,7 @@ def get_latents_from_seed(seed: int, batch_size: int, height: int, width: int) -
     rng = np.random.default_rng(seed)
     image_latents = rng.standard_normal(latents_shape).astype(np.float32)
     return image_latents
+
 
 
 parser = argparse.ArgumentParser(description="simple interface for ONNX based Stable Diffusion")
@@ -28,13 +38,29 @@ parser.add_argument("--height", dest="height", type=int, default=384, help="heig
 parser.add_argument("--width", dest="width", type=int, default=384, help="width of the image")
 parser.add_argument("--seed", dest="seed", default="", help="seed for the generator")
 parser.add_argument("--cpu-only", action="store_true", default=False, help="run ONNX with CPU")
+parser.add_argument("--scheduler", dest="scheduler", default="pndm", help="schedulers: pndm, lms, ddim, ddpm, euler, eulera, dpms")
 args = parser.parse_args()
 
+if args.scheduler == "pndm":
+    scheduler = PNDMScheduler.from_pretrained(args.model_path, subfolder="scheduler")
+elif args.scheduler == "lms":
+    scheduler = LMSDiscreteScheduler.from_pretrained(args.model_path, subfolder="scheduler")
+elif args.scheduler == "ddim":
+    scheduler = DDIMScheduler.from_pretrained(args.model_path, subfolder="scheduler")
+elif args.scheduler == "ddpm":
+    scheduler = DDPMScheduler.from_pretrained(args.model_path, subfolder="scheduler")
+elif args.scheduler == "euler":
+    scheduler = EulerDiscreteScheduler.from_pretrained(args.model_path, subfolder="scheduler")
+elif args.scheduler == "eulera":
+    scheduler = EulerAncestralDiscreteScheduler.from_pretrained(args.model_path, subfolder="scheduler")
+elif args.scheduler == "dpms":
+    scheduler = DPMSolverMultistepScheduler.from_pretrained(args.model_path, subfolder="scheduler")
+else:
+    scheduler = PNDMScheduler.from_pretrained(args.model_path, subfolder="scheduler")
+
 provider = "CPUExecutionProvider" if args.cpu_only else "DmlExecutionProvider"
-scheduler = PNDMScheduler(beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear")
 pipe = OnnxStableDiffusionPipeline.from_pretrained(
-    args.model_path, provider=provider, scheduler=scheduler)
-pipe.safety_checker = lambda images, **kwargs: (images, [False] * len(images))  # Disable the safety checker
+    args.model_path, provider=provider, scheduler=scheduler, safety_checker=None)
 
 # generate seeds for iterations
 if args.seed == "":
@@ -77,4 +103,3 @@ images[0].save(os.path.join(output_path, f"{next_index:06}-00.png"))
 time_taken = (finish - start) / 60.0
 status = f"Run index {next_index:06} took {time_taken:.1f} minutes to generate an image. seed: {seed}"
 print(status)
-

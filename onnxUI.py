@@ -6,7 +6,15 @@ import time
 from typing import Tuple
 
 from diffusers import OnnxStableDiffusionPipeline, OnnxStableDiffusionImg2ImgPipeline
-from diffusers import DDIMScheduler, LMSDiscreteScheduler, PNDMScheduler
+from diffusers import (
+    DDPMScheduler,
+    DDIMScheduler,
+    PNDMScheduler,
+    LMSDiscreteScheduler,
+    EulerDiscreteScheduler,
+    EulerAncestralDiscreteScheduler,
+    DPMSolverMultistepScheduler
+)
 from diffusers import __version__ as _df_version
 import gradio as gr
 import numpy as np
@@ -166,13 +174,20 @@ def generate_click(
         scheduler = LMSDiscreteScheduler.from_config(model_path, subfolder="scheduler")
     elif sched_name == "DDIM" and type(scheduler) is not DDIMScheduler:
         scheduler = DDIMScheduler.from_config(model_path, subfolder="scheduler")
+    elif sched_name == "DDPM" and type(scheduler) is not DDPMScheduler:
+        scheduler = DDPMScheduler.from_config(model_path, subfolder="scheduler")
+    elif sched_name == "EULER" and type(scheduler) is not EulerDiscreteScheduler:
+        scheduler = EulerDiscreteScheduler.from_config(model_path, subfolder="scheduler")
+    elif sched_name == "EULERA" and type(scheduler) is not EulerAncestralDiscreteScheduler:
+        scheduler = EulerAncestralDiscreteScheduler.from_config(model_path, subfolder="scheduler")
+    elif sched_name == "DPMS" and type(scheduler) is not DPMSolverMultistepScheduler:
+        scheduler = DPMSolverMultistepScheduler.from_config(model_path, subfolder="scheduler")
 
     # select which pipeline depending on current tab
     if current_tab == 0:
         if current_pipe != "txt2img" or pipe is None:
             pipe = OnnxStableDiffusionPipeline.from_pretrained(
-                model_path, provider=provider, scheduler=scheduler)
-            pipe.safety_checker = lambda images, **kwargs: (images, [False] * len(images))
+                model_path, provider=provider, scheduler=scheduler, safety_checker=None)
             gc.collect()
         current_pipe = "txt2img"
 
@@ -185,8 +200,7 @@ def generate_click(
     elif current_tab == 1:
         if current_pipe != "img2img" or pipe is None:
             pipe = OnnxStableDiffusionImg2ImgPipeline.from_pretrained(
-                model_path, provider=provider, scheduler=scheduler)
-            pipe.safety_checker = lambda images, **kwargs: (images, [False] * len(images))
+                model_path, provider=provider, scheduler=scheduler, safety_checker=None)
             gc.collect()
         current_pipe = "img2img"
 
@@ -274,7 +288,7 @@ if __name__ == "__main__":
                 with gr.Tab(label="txt2img") as tab0:
                     prompt_t0 = gr.Textbox(value="", lines=2, label="prompt")
                     neg_prompt_t0 = gr.Textbox(value="", lines=2, label="negative prompt", visible=is_v_0_4)
-                    sch_t0 = gr.Radio(["DDIM", "LMS", "PNDM"], value="PNDM", label="Scheduler")
+                    sch_t0 = gr.Radio(["DPMS", "EULERA", "EULER", "DDPM", "DDIM", "LMS", "PNDM"], value="PNDM", label="Scheduler")
                     with gr.Row():
                         iter_t0 = gr.Slider(1, 24, value=1, step=1, label="iteration count")
                         batch_t0 = gr.Slider(1, 4, value=1, step=1, label="batch size")
@@ -288,7 +302,7 @@ if __name__ == "__main__":
                 with gr.Tab(label="img2img", visible=is_v_0_6) as tab1:
                     prompt_t1 = gr.Textbox(value="", lines=2, label="prompt")
                     neg_prompt_t1 = gr.Textbox(value="", lines=2, label="negative prompt", visible=is_v_0_4)
-                    sch_t1 = gr.Radio(["DDIM", "LMS", "PNDM"], value="PNDM", label="Scheduler")
+                    sch_t1 = gr.Radio(["DPMS", "EULERA", "EULER", "DDPM", "DDIM", "LMS", "PNDM"], value="PNDM", label="Scheduler")
                     image_t1 = gr.Image(label="input image", type="pil")
                     with gr.Row():
                         iter_t1 = gr.Slider(1, 24, value=1, step=1, label="iteration count")
@@ -331,4 +345,3 @@ if __name__ == "__main__":
     # use the following to launch the web interface to a private network
     # demo.queue(concurrency_count=1)
     # demo.launch(server_name="0.0.0.0")
-

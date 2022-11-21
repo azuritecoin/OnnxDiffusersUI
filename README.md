@@ -149,72 +149,7 @@ NOTE: if you're updating from diffusers v0.5.1 and below, you will need to re-co
 
 **WIP Update:** There has been an [issue raised](https://github.com/huggingface/diffusers/issues/967) to fix the bug but it's not in v0.6.0.
 
-Currently the diffusers library supports PNDM, DDIM, and LMS Discrete schedulers. By default the scripts I've provided only uses PNDM. In the mean time you can edit the diffusers library directly. There's two file you need to modify: `pipeline_onnx_stable_diffusion.py` and `pipeline_onnx_stable_diffusion_img2img.py`
-
-### Editing `pipeline_onnx_stable_diffusion.py`
-
-Go open the first file in notepad `stable_diff\virtualenv\Lib\site-packages\diffusers\pipelines\stable_diffusion\pipeline_onnx_stable_diffusion.py`.
-
-- On line 4, this line:  
-```python
-import numpy as np
-```  
-add this line underneath:  
-```python
-import numpy as np
-import torch
-```
-
-- On line 153 change this:  
-```python
-latents = latents * self.scheduler.init_noise_sigma
-```  
-to this:  
-```python
-latents = latents * np.array(self.scheduler.init_noise_sigma)
-```
-
-- On line 171 change this:  
-```python
-sample=latent_model_input, timestep=np.array([t]), encoder_hidden_states=text_embeddings
-```  
-to this:  
-```python
-sample=latent_model_input, timestep=np.array([t], dtype=np.int64), encoder_hidden_states=text_embeddings
-```
-
-- On line 181, this line:  
-```python
-latents = self.scheduler.step(noise_pred, t, latents, **extra_step_kwargs).prev_sample
-```  
-add this line above:  
-```python
-latents = torch.tensor(latents)
-latents = self.scheduler.step(noise_pred, t, latents, **extra_step_kwargs).prev_sample
-```
-
-### Editing `pipeline_onnx_stable_diffusion_img2img.py`
-
-Go open the second file in notepad `stable_diff\virtualenv\Lib\site-packages\diffusers\pipelines\stable_diffusion\pipeline_onnx_stable_diffusion_img2img.py`.
-
-- On line 327 change this:  
-```python
-sample=latent_model_input, timestep=np.array([t]), encoder_hidden_states=text_embeddings
-```  
-to this:  
-```python
-sample=latent_model_input, timestep=np.array([t], dtype=np.int64), encoder_hidden_states=text_embeddings
-```
-
-- On line 336, this line:  
-```python
-latents = self.scheduler.step(noise_pred, t, latents, **extra_step_kwargs).prev_sample
-```  
-add this line above:  
-```python
-latents = torch.tensor(latents)
-latents = self.scheduler.step(noise_pred, t, latents, **extra_step_kwargs).prev_sample
-```
+Currently the diffusers library supports PNDM, LMS, DDIM, DDPM, Euler, EulerA, DPMS Discrete schedulers.
 
 ### Undoing Your Changes
 
