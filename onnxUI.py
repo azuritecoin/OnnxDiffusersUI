@@ -9,6 +9,7 @@ from diffusers import (
     OnnxStableDiffusionPipeline,
     OnnxStableDiffusionImg2ImgPipeline,
     OnnxStableDiffusionInpaintPipeline,
+    OnnxStableDiffusionInpaintPipelineLegacy,
     DDPMScheduler,
     DDIMScheduler,
     PNDMScheduler,
@@ -43,6 +44,7 @@ def run_diffusers(
 ) -> Tuple[list, str]:
     global model_name
     global current_pipe
+    global current_legacy
     global pipe
 
     prompt.strip("\n")
@@ -78,7 +80,8 @@ def run_diffusers(
     images = []
     time_taken = 0
     for i in range(iteration_count):
-        print(str(i+1) + '/' + str(iteration_count))
+        print(f"iteration {i+1}/{iteration_count}")
+
         info = f"{next_index+i:06} | prompt: {prompt} negative prompt: {neg_prompt} | scheduler: {sched_name} " + \
             f"model: {model_name} iteration size: {iteration_count} batch size: {batch_size} steps: {steps} " + \
             f"scale: {guidance_scale} height: {height} width: {width} eta: {eta} seed: {seeds[i]}"
@@ -104,12 +107,20 @@ def run_diffusers(
                 num_images_per_prompt=batch_size, generator=rng).images
             finish = time.time()
         elif current_pipe == "inpaint":
-            start = time.time()
-            batch_images = pipe(
-                prompt, negative_prompt=neg_prompt, image=init_image, mask_image=init_mask, height=height, width=width,
-                num_inference_steps=steps, guidance_scale=guidance_scale, eta=eta, num_images_per_prompt=batch_size,
-                generator=rng).images
-            finish = time.time()
+            if current_legacy:
+                start = time.time()
+                batch_images = pipe(
+                    prompt, negative_prompt=neg_prompt, init_image=init_image, mask_image=init_mask, height=height,
+                    width=width, num_inference_steps=steps, guidance_scale=guidance_scale, eta=eta,
+                    num_images_per_prompt=batch_size, generator=rng).images
+                finish = time.time()
+            else:
+                start = time.time()
+                batch_images = pipe(
+                    prompt, negative_prompt=neg_prompt, image=init_image, mask_image=init_mask, height=height,
+                    width=width, num_inference_steps=steps, guidance_scale=guidance_scale, eta=eta,
+                    num_images_per_prompt=batch_size, generator=rng).images
+                finish = time.time()
 
         short_prompt = prompt.strip("<>:\"/\\|?*\n\t")
         short_prompt = short_prompt[:99] if len(short_prompt) > 100 else short_prompt
@@ -156,24 +167,25 @@ def clear_click():
             guid_t0: 7.5, height_t0: 512, width_t0: 512, eta_t0: 0.0, seed_t0: "", fmt_t0: "png"}
     elif current_tab == 1:
         return {
-            prompt_t1: "", neg_prompt_t1: "", image_t1: None, sch_t1: "PNDM", iter_t1: 1, batch_t1: 1, steps_t1: 16,
+            prompt_t1: "", neg_prompt_t1: "", sch_t1: "PNDM", image_t1: None, iter_t1: 1, batch_t1: 1, steps_t1: 16,
             guid_t1: 7.5, height_t1: 512, width_t1: 512, eta_t1: 0.0, denoise_t1: 0.8, seed_t1: "", fmt_t1: "png"}
     elif current_tab == 2:
         return {
-            prompt_t2: "", neg_prompt_t2: "", image_t2: None, sch_t2: "PNDM", iter_t2: 1, batch_t2: 1, steps_t2: 16,
-            guid_t2: 7.5, height_t2: 512, width_t2: 512, eta_t2: 0.0, seed_t2: "", fmt_t2: "png"}
+            prompt_t2: "", neg_prompt_t2: "", sch_t2: "PNDM", legacy_t2: True, image_t2: None, iter_t2: 1, batch_t2: 1,
+            steps_t2: 16, guid_t2: 7.5, height_t2: 512, width_t2: 512, eta_t2: 0.0, seed_t2: "", fmt_t2: "png"}
 
 
 def generate_click(
     model_drop, prompt_t0, neg_prompt_t0, sch_t0, iter_t0, batch_t0, steps_t0, guid_t0, height_t0, width_t0, eta_t0,
     seed_t0, fmt_t0, prompt_t1, neg_prompt_t1, image_t1, sch_t1, iter_t1, batch_t1, steps_t1, guid_t1, height_t1,
-    width_t1, eta_t1, denoise_t1, seed_t1, fmt_t1, prompt_t2, neg_prompt_t2, sch_t2, image_t2, iter_t2, batch_t2,
-    steps_t2, guid_t2, height_t2, width_t2, eta_t2, seed_t2, fmt_t2
+    width_t1, eta_t1, denoise_t1, seed_t1, fmt_t1, prompt_t2, neg_prompt_t2, sch_t2, legacy_t2, image_t2, iter_t2,
+    batch_t2, steps_t2, guid_t2, height_t2, width_t2, eta_t2, seed_t2, fmt_t2
 ):
     global model_name
     global provider
     global current_tab
     global current_pipe
+    global current_legacy
     global scheduler
     global pipe
     
@@ -241,11 +253,16 @@ def generate_click(
             prompt_t1, neg_prompt_t1, input_image, None, iter_t1, batch_t1, steps_t1, guid_t1, height_t1, width_t1,
             eta_t1, denoise_t1, seed_t1, fmt_t1)
     elif current_tab == 2:
-        if current_pipe != "inpaint" or pipe is None:
-            pipe = OnnxStableDiffusionInpaintPipeline.from_pretrained(
-                model_path, provider=provider, scheduler=scheduler, safety_checker=None)
+        if current_pipe != "inpaint" or pipe is None or current_legacy != legacy_t2:
+            if legacy_t2:
+                pipe = OnnxStableDiffusionInpaintPipelineLegacy.from_pretrained(
+                    model_path, provider=provider, scheduler=scheduler, safety_checker=None)
+            else:
+                pipe = OnnxStableDiffusionInpaintPipeline.from_pretrained(
+                    model_path, provider=provider, scheduler=scheduler, safety_checker=None)
             gc.collect()
         current_pipe = "inpaint"
+        current_legacy = legacy_t2
 
         if type(pipe.scheduler) is not type(scheduler):
             pipe.scheduler = scheduler
@@ -293,6 +310,7 @@ if __name__ == "__main__":
     provider = "CPUExecutionProvider" if args.cpu_only else "DmlExecutionProvider"
     current_tab = 0
     current_pipe = "txt2img"
+    current_legacy = False
 
     # diffusers objects
     scheduler = None
@@ -370,7 +388,8 @@ if __name__ == "__main__":
                     prompt_t2 = gr.Textbox(value="", lines=2, label="prompt")
                     neg_prompt_t2 = gr.Textbox(value="", lines=2, label="negative prompt", visible=is_v_0_4)
                     sch_t2 = gr.Radio(["DPMS", "EULERA", "EULER", "DDPM", "DDIM", "LMS", "PNDM"], value="PNDM", label="scheduler")
-                    image_t2 = gr.ImageMask(label="input image", type="pil", elem_id="image_inpaint")
+                    legacy_t2 = gr.Checkbox(value=False, label="legacy inpaint")
+                    image_t2 = gr.Image(source="upload", tool="sketch", label="input image", type="pil", elem_id="image_inpaint")
                     with gr.Row():
                         iter_t2 = gr.Slider(1, 24, value=1, step=1, label="iteration count")
                         batch_t2 = gr.Slider(1, 4, value=1, step=1, label="batch size")
@@ -393,8 +412,8 @@ if __name__ == "__main__":
             prompt_t1, neg_prompt_t1, image_t1, sch_t1, iter_t1, batch_t1, steps_t1, guid_t1, height_t1,width_t1,
             eta_t1, denoise_t1, seed_t1, fmt_t1]
         tab2_inputs = [
-            prompt_t2, neg_prompt_t2, sch_t2, image_t2, iter_t2, batch_t2, steps_t2, guid_t2,
-            height_t2,width_t2, eta_t2, seed_t2, fmt_t2]
+            prompt_t2, neg_prompt_t2, sch_t2, legacy_t2, image_t2, iter_t2, batch_t2, steps_t2, guid_t2, height_t2,
+            width_t2, eta_t2, seed_t2, fmt_t2]
         all_inputs = [model_drop]
         all_inputs.extend(tab0_inputs)
         all_inputs.extend(tab1_inputs)
