@@ -3,7 +3,7 @@ import gc
 import os
 import re
 import time
-from typing import Tuple
+from typing import Optional, Tuple
 
 from diffusers import OnnxStableDiffusionPipeline, OnnxStableDiffusionImg2ImgPipeline
 from diffusers import (
@@ -22,19 +22,11 @@ from packaging import version
 import PIL
 
 
-def get_latents_from_seed(seed: int, batch_size: int, height: int, width: int) -> np.ndarray:
-    latents_shape = (batch_size, 4, height // 8, width // 8)
-    # Gotta use numpy instead of torch, because torch's randn() doesn't support DML
-    rng = np.random.default_rng(seed)
-    image_latents = rng.standard_normal(latents_shape).astype(np.float32)
-    return image_latents
-
-
 # gradio function
 def run_diffusers(
     prompt: str,
-    neg_prompt: str,
-    init_image: PIL.Image.Image,
+    neg_prompt: Optional[str],
+    init_image: Optional[PIL.Image.Image],
     iteration_count: int,
     batch_size: int,
     steps: int,
@@ -42,7 +34,7 @@ def run_diffusers(
     height: int,
     width: int,
     eta: float,
-    denoise_strength: float,
+    denoise_strength: Optional[float],
     seed: str,
     image_format: str
 ) -> Tuple[list, str]:
@@ -79,8 +71,7 @@ def run_diffusers(
         next_index = 0
 
     sched_name = str(pipe.scheduler._class_name)
-    prompts = [prompt]*batch_size
-    neg_prompts = [neg_prompt]*batch_size if neg_prompt != "" else None
+    neg_prompt = None if neg_prompt == "" else neg_prompt
     images = []
     time_taken = 0
     for i in range(iteration_count):
@@ -92,23 +83,21 @@ def run_diffusers(
         with open(os.path.join(output_path, "history.txt"), "a") as log:
             log.write(info + "\n")
 
-        if current_pipe == "txt2img":
-            # Generate our own latents so that we can provide a seed.
-            latents = get_latents_from_seed(seeds[i], batch_size, height, width)
+        # create legacy generator object from seed
+        rng = np.random.RandomState(seeds[i])
 
+        if current_pipe == "txt2img":
             start = time.time()
             batch_images = pipe(
-                prompts, negative_prompt=neg_prompts, height=height, width=width, num_inference_steps=steps,
-                guidance_scale=guidance_scale, eta=eta, latents=latents).images
+                prompt, negative_prompt=neg_prompt, height=height, width=width, num_inference_steps=steps,
+                guidance_scale=guidance_scale, eta=eta, num_images_per_prompt=batch_size, generator=rng).images
             finish = time.time()
         elif current_pipe == "img2img":
-            # NOTE: at this time there's no good way of setting the seed for the random noise added by the scheduler
-            # np.random.seed(seeds[i])
             start = time.time()
             batch_images = pipe(
-                prompts, negative_prompt=neg_prompts, init_image=init_image, height=height, width=width,
+                prompt, negative_prompt=neg_prompt, init_image=init_image, height=height, width=width,
                 num_inference_steps=steps, guidance_scale=guidance_scale, eta=eta, strength=denoise_strength,
-                num_images_per_prompt=batch_size).images
+                num_images_per_prompt=batch_size, generator=rng).images
             finish = time.time()
 
         short_prompt = prompt.strip("<>:\"/\\|?*\n\t")
