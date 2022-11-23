@@ -78,6 +78,7 @@ def run_diffusers(
     images = []
     time_taken = 0
     for i in range(iteration_count):
+        print(str(i+1) + '/' + str(iteration_count))
         info = f"{next_index+i:06} | prompt: {prompt} negative prompt: {neg_prompt} | scheduler: {sched_name} " + \
             f"model: {model_name} iteration size: {iteration_count} batch size: {batch_size} steps: {steps} " + \
             f"scale: {guidance_scale} height: {height} width: {width} eta: {eta} seed: {seeds[i]}"
@@ -310,7 +311,7 @@ if __name__ == "__main__":
     #image_inpaint {min-height: 400px}
     #image_inpaint [data-testid="image"], #image_inpaint [data-testid="image"] > div {min-height: 400px}
     #image_inpaint .touch-none {display: flex}
-    #image_inpaint img {display: block; margin-left: 8%; max-width: 84%}
+    #image_inpaint img {display: block; max-width: 84%}
     #image_inpaint canvas {max-width: 84%; object-fit: contain}
     """
 
