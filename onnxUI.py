@@ -5,8 +5,10 @@ import re
 import time
 from typing import Optional, Tuple
 
-from diffusers import OnnxStableDiffusionPipeline, OnnxStableDiffusionImg2ImgPipeline
 from diffusers import (
+    OnnxStableDiffusionPipeline,
+    OnnxStableDiffusionImg2ImgPipeline,
+    OnnxStableDiffusionInpaintPipeline,
     DDPMScheduler,
     DDIMScheduler,
     PNDMScheduler,
@@ -27,6 +29,7 @@ def run_diffusers(
     prompt: str,
     neg_prompt: Optional[str],
     init_image: Optional[PIL.Image.Image],
+    init_mask: Optional[PIL.Image.Image],
     iteration_count: int,
     batch_size: int,
     steps: int,
@@ -99,6 +102,13 @@ def run_diffusers(
                 num_inference_steps=steps, guidance_scale=guidance_scale, eta=eta, strength=denoise_strength,
                 num_images_per_prompt=batch_size, generator=rng).images
             finish = time.time()
+        elif current_pipe == "inpaint":
+            start = time.time()
+            batch_images = pipe(
+                prompt, negative_prompt=neg_prompt, image=init_image, mask_image=init_mask, height=height, width=width,
+                num_inference_steps=steps, guidance_scale=guidance_scale, eta=eta, num_images_per_prompt=batch_size,
+                generator=rng).images
+            finish = time.time()
 
         short_prompt = prompt.strip("<>:\"/\\|?*\n\t")
         short_prompt = short_prompt[:99] if len(short_prompt) > 100 else short_prompt
@@ -120,6 +130,23 @@ def run_diffusers(
     return images, status
 
 
+def resize_and_crop(input_image: PIL.Image.Image, height: int, width: int):
+    input_width, input_height = input_image.size
+    if height / width > input_height / input_width:
+        adjust_width = int(input_width * height / input_height)
+        input_image = input_image.resize((adjust_width, height))
+        left = (adjust_width - width) // 2
+        right = left + width
+        input_image = input_image.crop((left, 0, right, height))
+    else:
+        adjust_height = int(input_height * width / input_width)
+        input_image = input_image.resize((width, adjust_height))
+        top = (adjust_height - height) // 2
+        bottom = top + height
+        input_image = input_image.crop((0, top, width, bottom))
+    return input_image
+
+
 def clear_click():
     global current_tab
     if current_tab == 0:
@@ -130,12 +157,17 @@ def clear_click():
         return {
             prompt_t1: "", neg_prompt_t1: "", image_t1: None, sch_t1: "PNDM", iter_t1: 1, batch_t1: 1, steps_t1: 16,
             guid_t1: 7.5, height_t1: 512, width_t1: 512, eta_t1: 0.0, denoise_t1: 0.8, seed_t1: "", fmt_t1: "png"}
+    elif current_tab == 2:
+        return {
+            prompt_t2: "", neg_prompt_t2: "", image_t2: None, sch_t2: "PNDM", iter_t2: 1, batch_t2: 1, steps_t2: 16,
+            guid_t2: 7.5, height_t2: 512, width_t2: 512, eta_t2: 0.0, seed_t2: "", fmt_t2: "png"}
 
 
 def generate_click(
     model_drop, prompt_t0, neg_prompt_t0, sch_t0, iter_t0, batch_t0, steps_t0, guid_t0, height_t0, width_t0, eta_t0,
     seed_t0, fmt_t0, prompt_t1, neg_prompt_t1, image_t1, sch_t1, iter_t1, batch_t1, steps_t1, guid_t1, height_t1,
-    width_t1, eta_t1, denoise_t1, seed_t1, fmt_t1
+    width_t1, eta_t1, denoise_t1, seed_t1, fmt_t1, prompt_t2, neg_prompt_t2, sch_t2, image_t2, iter_t2, batch_t2,
+    steps_t2, guid_t2, height_t2, width_t2, eta_t2, seed_t2, fmt_t2
 ):
     global model_name
     global provider
@@ -154,8 +186,12 @@ def generate_click(
     # select which scheduler depending on current tab
     if current_tab == 0:
         sched_name = sch_t0
-    else:
+    elif current_tab == 1:
         sched_name = sch_t1
+    elif current_tab == 2:
+        sched_name = sch_t2
+    else:
+        raise Exception("Unknown tab")
 
     if sched_name == "PNDM" and type(scheduler) is not PNDMScheduler:
         scheduler = PNDMScheduler.from_config(model_path, subfolder="scheduler")
@@ -184,7 +220,7 @@ def generate_click(
             pipe.scheduler = scheduler
 
         return run_diffusers(
-            prompt_t0, neg_prompt_t0, None, iter_t0, batch_t0, steps_t0, guid_t0, height_t0, width_t0, eta_t0, 0,
+            prompt_t0, neg_prompt_t0, None, None, iter_t0, batch_t0, steps_t0, guid_t0, height_t0, width_t0, eta_t0, 0,
             seed_t0, fmt_t0)
     elif current_tab == 1:
         if current_pipe != "img2img" or pipe is None:
@@ -198,24 +234,31 @@ def generate_click(
 
         # input image resizing
         input_image = image_t1.convert("RGB")
-        input_width, input_height = input_image.size
-        if height_t1 / width_t1 > input_height / input_width:
-            adjust_width = int(input_width * height_t1 / input_height)
-            input_image = input_image.resize((adjust_width, height_t1))
-            left = (adjust_width - width_t1) // 2
-            right = left + width_t1
-            input_image = input_image.crop((left, 0, right, height_t1))
-        else:
-            adjust_height = int(input_height * width_t1 / input_width)
-            input_image = input_image.resize((width_t1, adjust_height))
-            top = (adjust_height - height_t1) // 2
-            bottom = top + height_t1
-            input_image = input_image.crop((0, top, width_t1, bottom))
+        input_image = resize_and_crop(input_image, height_t1, width_t1)
 
         return run_diffusers(
-            prompt_t1, neg_prompt_t1, input_image, iter_t1, batch_t1, steps_t1, guid_t1, height_t1, width_t1, eta_t1,
-            denoise_t1, seed_t1, fmt_t1)
+            prompt_t1, neg_prompt_t1, input_image, None, iter_t1, batch_t1, steps_t1, guid_t1, height_t1, width_t1,
+            eta_t1, denoise_t1, seed_t1, fmt_t1)
+    elif current_tab == 2:
+        if current_pipe != "inpaint" or pipe is None:
+            pipe = OnnxStableDiffusionInpaintPipeline.from_pretrained(
+                model_path, provider=provider, scheduler=scheduler, safety_checker=None)
+            gc.collect()
+        current_pipe = "inpaint"
 
+        if type(pipe.scheduler) is not type(scheduler):
+            pipe.scheduler = scheduler
+
+        # input image resizing
+        input_image = image_t2["image"].convert("RGB")
+        input_image = resize_and_crop(input_image, height_t2, width_t2)
+        
+        input_mask = image_t2["mask"].convert("RGB")
+        input_mask = resize_and_crop(input_mask, height_t2, width_t2)
+
+        return run_diffusers(
+            prompt_t2, neg_prompt_t2, input_image, input_mask, iter_t2, batch_t2, steps_t2, guid_t2, height_t2,
+            width_t2, eta_t2, 0, seed_t2, fmt_t2)
 
 def select_tab0():
     global current_tab
@@ -225,6 +268,11 @@ def select_tab0():
 def select_tab1():
     global current_tab
     current_tab = 1
+
+
+def select_tab2():
+    global current_tab
+    current_tab = 2
 
 
 def choose_sch(sched_name: str):
@@ -330,7 +378,6 @@ if __name__ == "__main__":
                     height_t2 = gr.Slider(384, 768, value=512, step=64, label="height")
                     width_t2 = gr.Slider(384, 768, value=512, step=64, label="width")
                     eta_t2 = gr.Slider(0, 1, value=0.0, step=0.01, label="DDIM eta", interactive=False)
-                    denoise_t2 = gr.Slider(0, 1, value=0.8, step=0.01, label="denoise strength")
                     seed_t2 = gr.Textbox(value="", max_lines=1, label="seed")
                     fmt_t2 = gr.Radio(["png", "jpg"], value="png", label="image format")
             with gr.Column(scale=11, min_width=550):
@@ -338,18 +385,30 @@ if __name__ == "__main__":
                 status_out = gr.Textbox(value="", label="status")
 
         # config components
-        all_inputs = [
-            model_drop, prompt_t0, neg_prompt_t0, sch_t0, iter_t0, batch_t0, steps_t0, guid_t0, height_t0, width_t0,
-            eta_t0, seed_t0, fmt_t0, prompt_t1, neg_prompt_t1, image_t1, sch_t1, iter_t1, batch_t1, steps_t1, guid_t1,
-            height_t1, width_t1, eta_t1, denoise_t1, seed_t1, fmt_t1]
+        tab0_inputs = [
+            prompt_t0, neg_prompt_t0, sch_t0, iter_t0, batch_t0, steps_t0, guid_t0, height_t0, width_t0, eta_t0,
+            seed_t0, fmt_t0]
+        tab1_inputs = [
+            prompt_t1, neg_prompt_t1, image_t1, sch_t1, iter_t1, batch_t1, steps_t1, guid_t1, height_t1,width_t1,
+            eta_t1, denoise_t1, seed_t1, fmt_t1]
+        tab2_inputs = [
+            prompt_t2, neg_prompt_t2, sch_t2, image_t2, iter_t2, batch_t2, steps_t2, guid_t2,
+            height_t2,width_t2, eta_t2, seed_t2, fmt_t2]
+        all_inputs = [model_drop]
+        all_inputs.extend(tab0_inputs)
+        all_inputs.extend(tab1_inputs)
+        all_inputs.extend(tab2_inputs)
+
         clear_btn.click(fn=clear_click, inputs=None, outputs=all_inputs, queue=False)
         gen_btn.click(fn=generate_click, inputs=all_inputs, outputs=[image_out, status_out])
 
         tab0.select(fn=select_tab0, inputs=None, outputs=None)
         tab1.select(fn=select_tab1, inputs=None, outputs=None)
+        tab2.select(fn=select_tab2, inputs=None, outputs=None)
 
         sch_t0.change(fn=choose_sch, inputs=sch_t0, outputs=eta_t0, queue=False)
         sch_t1.change(fn=choose_sch, inputs=sch_t1, outputs=eta_t1, queue=False)
+        sch_t2.change(fn=choose_sch, inputs=sch_t2, outputs=eta_t2, queue=False)
 
         image_out.style(grid=2)
         image_t1.style(height=402)
