@@ -263,10 +263,18 @@ if __name__ == "__main__":
     # check versions
     is_v_0_4 = version.parse(_df_version) >= version.parse("0.4.0")
     is_v_0_6 = version.parse(_df_version) >= version.parse("0.6.0")
+    is_v_0_8 = version.parse(_df_version) >= version.parse("0.8.0")
 
     # custom css
     custom_css = """
     #gen_button {height: 100px}
+    #image_init {min-height: 400px}
+    #image_init [data-testid="image"], #image_init [data-testid="image"] > div {min-height: 400px}
+    #image_inpaint {min-height: 400px}
+    #image_inpaint [data-testid="image"], #image_inpaint [data-testid="image"] > div {min-height: 400px}
+    #image_inpaint .touch-none{display: flex}
+    #image_inpaint img {display: block; margin-left: 8%; max-width: 84%}
+    #image_inpaint canvas {max-width: 84%; object-fit: contain}
     """
 
     # search the model folder
@@ -282,13 +290,18 @@ if __name__ == "__main__":
     title = "Stable Diffusion ONNX"
     with gr.Blocks(title=title, css=custom_css) as demo:
         with gr.Row():
-            with gr.Column(scale=1, min_width=600):
-                with gr.Row():
+                with gr.Column(scale=13):
                     model_drop = gr.Dropdown(model_list, value=default_model, label="model folder", interactive=True)
+                with gr.Column(scale=11):
+                    with gr.Row():
+                        gen_btn = gr.Button("Generate", variant="primary", elem_id="gen_button")
+                        clear_btn = gr.Button("Clear", elem_id="gen_button")
+        with gr.Row():
+            with gr.Column(scale=13):
                 with gr.Tab(label="txt2img") as tab0:
                     prompt_t0 = gr.Textbox(value="", lines=2, label="prompt")
                     neg_prompt_t0 = gr.Textbox(value="", lines=2, label="negative prompt", visible=is_v_0_4)
-                    sch_t0 = gr.Radio(["DPMS", "EULERA", "EULER", "DDPM", "DDIM", "LMS", "PNDM"], value="PNDM", label="Scheduler")
+                    sch_t0 = gr.Radio(["DPMS", "EULERA", "EULER", "DDPM", "DDIM", "LMS", "PNDM"], value="PNDM", label="scheduler")
                     with gr.Row():
                         iter_t0 = gr.Slider(1, 24, value=1, step=1, label="iteration count")
                         batch_t0 = gr.Slider(1, 4, value=1, step=1, label="batch size")
@@ -302,8 +315,8 @@ if __name__ == "__main__":
                 with gr.Tab(label="img2img", visible=is_v_0_6) as tab1:
                     prompt_t1 = gr.Textbox(value="", lines=2, label="prompt")
                     neg_prompt_t1 = gr.Textbox(value="", lines=2, label="negative prompt", visible=is_v_0_4)
-                    sch_t1 = gr.Radio(["DPMS", "EULERA", "EULER", "DDPM", "DDIM", "LMS", "PNDM"], value="PNDM", label="Scheduler")
-                    image_t1 = gr.Image(label="input image", type="pil")
+                    sch_t1 = gr.Radio(["DPMS", "EULERA", "EULER", "DDPM", "DDIM", "LMS", "PNDM"], value="PNDM", label="scheduler")
+                    image_t1 = gr.Image(label="input image", type="pil", elem_id="image_init")
                     with gr.Row():
                         iter_t1 = gr.Slider(1, 24, value=1, step=1, label="iteration count")
                         batch_t1 = gr.Slider(1, 4, value=1, step=1, label="batch size")
@@ -315,11 +328,24 @@ if __name__ == "__main__":
                     denoise_t1 = gr.Slider(0, 1, value=0.8, step=0.01, label="denoise strength")
                     seed_t1 = gr.Textbox(value="", max_lines=1, label="seed")
                     fmt_t1 = gr.Radio(["png", "jpg"], value="png", label="image format")
-            with gr.Column(scale=1, min_width=600):
-                with gr.Row():
-                    gen_btn = gr.Button("Generate", variant="primary", elem_id="gen_button")
-                    clear_btn = gr.Button("Clear", elem_id="gen_button")
-                image_out = gr.Gallery(value=None, label="images")
+                with gr.Tab(label="inpainting", visible=is_v_0_6) as tab2:
+                    prompt_t2 = gr.Textbox(value="", lines=2, label="prompt")
+                    neg_prompt_t2 = gr.Textbox(value="", lines=2, label="negative prompt", visible=is_v_0_4)
+                    sch_t2 = gr.Radio(["DPMS", "EULERA", "EULER", "DDPM", "DDIM", "LMS", "PNDM"], value="PNDM", label="scheduler")
+                    image_t2 = gr.ImageMask(label="input image", type="pil", elem_id="image_inpaint")
+                    with gr.Row():
+                        iter_t2 = gr.Slider(1, 24, value=1, step=1, label="iteration count")
+                        batch_t2 = gr.Slider(1, 4, value=1, step=1, label="batch size")
+                    steps_t2 = gr.Slider(1, 100, value=16, step=1, label="steps")
+                    guid_t2 = gr.Slider(0, 50, value=7.5, step=0.1, label="guidance")
+                    height_t2 = gr.Slider(384, 768, value=512, step=64, label="height")
+                    width_t2 = gr.Slider(384, 768, value=512, step=64, label="width")
+                    eta_t2 = gr.Slider(0, 1, value=0.0, step=0.01, label="DDIM eta", interactive=False)
+                    denoise_t2 = gr.Slider(0, 1, value=0.8, step=0.01, label="denoise strength")
+                    seed_t2 = gr.Textbox(value="", max_lines=1, label="seed")
+                    fmt_t2 = gr.Radio(["png", "jpg"], value="png", label="image format")
+            with gr.Column(scale=11):
+                image_out = gr.Gallery(value=None, label="output images")
                 status_out = gr.Textbox(value="", label="status")
 
         # config components
@@ -337,7 +363,8 @@ if __name__ == "__main__":
         sch_t1.change(fn=choose_sch, inputs=sch_t1, outputs=eta_t1, queue=False)
 
         image_out.style(grid=2)
-        # image_t1.style(height=400)
+        image_t1.style(height=402)
+        image_t2.style(height=402)
 
     # start gradio web interface on local host
     demo.launch()
