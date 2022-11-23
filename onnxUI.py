@@ -267,12 +267,12 @@ if __name__ == "__main__":
 
     # custom css
     custom_css = """
-    #gen_button {height: 100px}
+    #gen_button {height: 90px}
     #image_init {min-height: 400px}
     #image_init [data-testid="image"], #image_init [data-testid="image"] > div {min-height: 400px}
     #image_inpaint {min-height: 400px}
     #image_inpaint [data-testid="image"], #image_inpaint [data-testid="image"] > div {min-height: 400px}
-    #image_inpaint .touch-none{display: flex}
+    #image_inpaint .touch-none {display: flex}
     #image_inpaint img {display: block; margin-left: 8%; max-width: 84%}
     #image_inpaint canvas {max-width: 84%; object-fit: contain}
     """
@@ -290,14 +290,14 @@ if __name__ == "__main__":
     title = "Stable Diffusion ONNX"
     with gr.Blocks(title=title, css=custom_css) as demo:
         with gr.Row():
-                with gr.Column(scale=13):
+                with gr.Column(scale=13, min_width=650):
                     model_drop = gr.Dropdown(model_list, value=default_model, label="model folder", interactive=True)
-                with gr.Column(scale=11):
+                with gr.Column(scale=11, min_width=550):
                     with gr.Row():
                         gen_btn = gr.Button("Generate", variant="primary", elem_id="gen_button")
                         clear_btn = gr.Button("Clear", elem_id="gen_button")
         with gr.Row():
-            with gr.Column(scale=13):
+            with gr.Column(scale=13, min_width=650):
                 with gr.Tab(label="txt2img") as tab0:
                     prompt_t0 = gr.Textbox(value="", lines=2, label="prompt")
                     neg_prompt_t0 = gr.Textbox(value="", lines=2, label="negative prompt", visible=is_v_0_4)
@@ -344,7 +344,7 @@ if __name__ == "__main__":
                     denoise_t2 = gr.Slider(0, 1, value=0.8, step=0.01, label="denoise strength")
                     seed_t2 = gr.Textbox(value="", max_lines=1, label="seed")
                     fmt_t2 = gr.Radio(["png", "jpg"], value="png", label="image format")
-            with gr.Column(scale=11):
+            with gr.Column(scale=11, min_width=550):
                 image_out = gr.Gallery(value=None, label="output images")
                 status_out = gr.Textbox(value="", label="status")
 
