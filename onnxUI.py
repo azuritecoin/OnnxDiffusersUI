@@ -101,6 +101,7 @@ def run_diffusers(
             finish = time.time()
 
         short_prompt = prompt.strip("<>:\"/\\|?*\n\t")
+        short_prompt = re.sub(r'[\\/*?:"<>|\n\t]',"",short_prompt)
         short_prompt = short_prompt[:99] if len(short_prompt) > 100 else short_prompt
         for j in range(batch_size):
             batch_images[j].save(os.path.join(output_path, f"{next_index+i:06}-{j:02}.{short_prompt}.{image_format}"))
