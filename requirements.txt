@@ -1,5 +1,5 @@
-git+https://github.com/huggingface/diffusers.git
-transformers
+diffusers<=0.8.0
+git+https://github.com/huggingface/transformers
 onnxruntime
 onnx
 torch

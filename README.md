@@ -4,11 +4,6 @@ I’ve been helping people setup Stable Diffusion and run it on their AMD graphi
 
 The intent of this UI is to get people started running Stable Diffusion on Windows. As such this UI won't be as feature rich as other UI, nor will it be as fast as running Stable Diffusion on Linux and ROCm.
 
-**WIP Update:** Known issues:
-- There's been a bug where DDIM and LMS schedulers will cause an error. See [this issue page](https://github.com/huggingface/diffusers/issues/967)
-- img2img output is sub-standard on PNDM scheduler, not sure if this is expected
-- the seed input for img2img does not generate the same image. See [this this page](https://github.com/huggingface/diffusers/pull/932)
-
 Example screenshot:  
 ![example screenshot using waifu diffusion model](images/Screenshot2.png)
 
@@ -144,17 +139,3 @@ Then run the following:
 `.\setup.bat -update`
 
 NOTE: if you're updating from diffusers v0.5.1 and below, you will need to re-convert your models.
-
-## Running Other Schedulers
-
-**WIP Update:** There has been an [issue raised](https://github.com/huggingface/diffusers/issues/967) to fix the bug but it's not in v0.6.0.
-
-Currently the diffusers library supports PNDM, LMS, DDIM, DDPM, Euler, EulerA, DPMS Discrete schedulers.
-
-### Undoing Your Changes
-
-If you messed something up editing the two files, you need to re-install diffusers using `pip`:  
-```
-pip uninstall diffusers
-pip install diffusers==0.6.0
-```
