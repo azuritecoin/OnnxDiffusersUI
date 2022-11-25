@@ -8,15 +8,9 @@ from typing import Optional, Tuple
 from diffusers import (
     OnnxStableDiffusionPipeline,
     OnnxStableDiffusionImg2ImgPipeline,
-    OnnxStableDiffusionInpaintPipeline,
-    OnnxStableDiffusionInpaintPipelineLegacy,
-    DDPMScheduler,
     DDIMScheduler,
     PNDMScheduler,
     LMSDiscreteScheduler,
-    EulerDiscreteScheduler,
-    EulerAncestralDiscreteScheduler,
-    DPMSolverMultistepScheduler
 )
 from diffusers import __version__ as _df_version
 import gradio as gr
@@ -215,18 +209,25 @@ def generate_click(
         scheduler = DDIMScheduler.from_config(model_path, subfolder="scheduler")
     elif sched_name == "DDPM" and type(scheduler) is not DDPMScheduler:
         scheduler = DDPMScheduler.from_config(model_path, subfolder="scheduler")
-    elif sched_name == "EULER" and type(scheduler) is not EulerDiscreteScheduler:
+    elif sched_name == "Euler" and type(scheduler) is not EulerDiscreteScheduler:
         scheduler = EulerDiscreteScheduler.from_config(model_path, subfolder="scheduler")
-    elif sched_name == "EULERA" and type(scheduler) is not EulerAncestralDiscreteScheduler:
+    elif sched_name == "EulerA" and type(scheduler) is not EulerAncestralDiscreteScheduler:
         scheduler = EulerAncestralDiscreteScheduler.from_config(model_path, subfolder="scheduler")
     elif sched_name == "DPMS" and type(scheduler) is not DPMSolverMultistepScheduler:
         scheduler = DPMSolverMultistepScheduler.from_config(model_path, subfolder="scheduler")
+
+    # select safety_checker based on version
+    if version.parse(_df_version) >= version.parse("0.8.0"):
+        safety_checker = None
+    else:
+        safety_checker = lambda images, **kwargs: (images, [False] * len(images))
 
     # select which pipeline depending on current tab
     if current_tab == 0:
         if current_pipe != "txt2img" or pipe is None:
             pipe = OnnxStableDiffusionPipeline.from_pretrained(
-                model_path, provider=provider, scheduler=scheduler, safety_checker=None)
+                model_path, provider=provider, scheduler=scheduler)
+            pipe.safety_checker=safety_checker
             gc.collect()
         current_pipe = "txt2img"
 
@@ -239,7 +240,8 @@ def generate_click(
     elif current_tab == 1:
         if current_pipe != "img2img" or pipe is None:
             pipe = OnnxStableDiffusionImg2ImgPipeline.from_pretrained(
-                model_path, provider=provider, scheduler=scheduler, safety_checker=None)
+                model_path, provider=provider, scheduler=scheduler)
+            pipe.safety_checker=safety_checker
             gc.collect()
         current_pipe = "img2img"
 
@@ -257,10 +259,12 @@ def generate_click(
         if current_pipe != "inpaint" or pipe is None or current_legacy != legacy_t2:
             if legacy_t2:
                 pipe = OnnxStableDiffusionInpaintPipelineLegacy.from_pretrained(
-                    model_path, provider=provider, scheduler=scheduler, safety_checker=None)
+                    model_path, provider=provider, scheduler=scheduler)
+                pipe.safety_checker=safety_checker
             else:
                 pipe = OnnxStableDiffusionInpaintPipeline.from_pretrained(
-                    model_path, provider=provider, scheduler=scheduler, safety_checker=None)
+                    model_path, provider=provider, scheduler=scheduler)
+                pipe.safety_checker=safety_checker
             gc.collect()
         current_pipe = "inpaint"
         current_legacy = legacy_t2
@@ -343,6 +347,19 @@ if __name__ == "__main__":
                 model_list.append(entry.name)
     default_model = model_list[0] if len(model_list) > 0 else None
 
+    if is_v_0_8:
+        from diffusers import (
+            OnnxStableDiffusionInpaintPipeline,
+            OnnxStableDiffusionInpaintPipelineLegacy,
+            DDPMScheduler,
+            EulerDiscreteScheduler,
+            EulerAncestralDiscreteScheduler,
+            DPMSolverMultistepScheduler
+        )
+        sched_list = ["DPMS", "EulerA", "Euler", "DDPM", "DDIM", "LMS", "PNDM"]
+    else:
+        sched_list = ["DDIM", "LMS", "PNDM"]
+
     # create gradio block
     title = "Stable Diffusion ONNX"
     with gr.Blocks(title=title, css=custom_css) as demo:
@@ -358,7 +375,7 @@ if __name__ == "__main__":
                 with gr.Tab(label="txt2img") as tab0:
                     prompt_t0 = gr.Textbox(value="", lines=2, label="prompt")
                     neg_prompt_t0 = gr.Textbox(value="", lines=2, label="negative prompt", visible=is_v_0_4)
-                    sch_t0 = gr.Radio(["DPMS", "EULERA", "EULER", "DDPM", "DDIM", "LMS", "PNDM"], value="PNDM", label="scheduler")
+                    sch_t0 = gr.Radio(sched_list, value="PNDM", label="scheduler")
                     with gr.Row():
                         iter_t0 = gr.Slider(1, 24, value=1, step=1, label="iteration count")
                         batch_t0 = gr.Slider(1, 4, value=1, step=1, label="batch size")
@@ -372,7 +389,7 @@ if __name__ == "__main__":
                 with gr.Tab(label="img2img", visible=is_v_0_6) as tab1:
                     prompt_t1 = gr.Textbox(value="", lines=2, label="prompt")
                     neg_prompt_t1 = gr.Textbox(value="", lines=2, label="negative prompt", visible=is_v_0_4)
-                    sch_t1 = gr.Radio(["DPMS", "EULERA", "EULER", "DDPM", "DDIM", "LMS", "PNDM"], value="PNDM", label="scheduler")
+                    sch_t1 = gr.Radio(sched_list, value="PNDM", label="scheduler")
                     image_t1 = gr.Image(label="input image", type="pil", elem_id="image_init")
                     with gr.Row():
                         iter_t1 = gr.Slider(1, 24, value=1, step=1, label="iteration count")
@@ -385,12 +402,13 @@ if __name__ == "__main__":
                     denoise_t1 = gr.Slider(0, 1, value=0.8, step=0.01, label="denoise strength")
                     seed_t1 = gr.Textbox(value="", max_lines=1, label="seed")
                     fmt_t1 = gr.Radio(["png", "jpg"], value="png", label="image format")
-                with gr.Tab(label="inpainting", visible=is_v_0_6) as tab2:
+                with gr.Tab(label="inpainting", visible=is_v_0_8) as tab2:
                     prompt_t2 = gr.Textbox(value="", lines=2, label="prompt")
                     neg_prompt_t2 = gr.Textbox(value="", lines=2, label="negative prompt", visible=is_v_0_4)
-                    sch_t2 = gr.Radio(["DPMS", "EULERA", "EULER", "DDPM", "DDIM", "LMS", "PNDM"], value="PNDM", label="scheduler")
+                    sch_t2 = gr.Radio(sched_list, value="PNDM", label="scheduler")
                     legacy_t2 = gr.Checkbox(value=False, label="legacy inpaint")
-                    image_t2 = gr.Image(source="upload", tool="sketch", label="input image", type="pil", elem_id="image_inpaint")
+                    image_t2 = gr.Image(
+                        source="upload", tool="sketch", label="input image", type="pil", elem_id="image_inpaint")
                     with gr.Row():
                         iter_t2 = gr.Slider(1, 24, value=1, step=1, label="iteration count")
                         batch_t2 = gr.Slider(1, 4, value=1, step=1, label="batch size")
