@@ -325,6 +325,10 @@ if __name__ == "__main__":
     is_v_0_4 = version.parse(_df_version) >= version.parse("0.4.0")
     is_v_0_6 = version.parse(_df_version) >= version.parse("0.6.0")
     is_v_0_8 = version.parse(_df_version) >= version.parse("0.8.0")
+    is_v_dev = version.parse(_df_version).is_prerelease
+    
+    # prerelease version use warning
+    print("You are using diffusers " + str(version.parse(_df_version)) + " (prerelease)\nIf you experience unexpected errors please run `pip install diffusers --force-reinstall`.") if is_v_dev else False
 
     # custom css
     custom_css = """
