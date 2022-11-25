@@ -1,4 +1,4 @@
-diffusers<=0.8.1
+diffusers>=0.8.1
 transformers
 onnxruntime
 onnx
