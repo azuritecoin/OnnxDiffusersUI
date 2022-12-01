@@ -32,6 +32,8 @@ parser.add_argument(
     "--prompt", dest="prompt", default="a photo of an astronaut riding a horse on mars",
     help="input text prompt to generate image")
 parser.add_argument(
+    "--neg_prompt", dest="neg_prompt", default="",help="input text for negative prompt")
+parser.add_argument(
     "--guidance-scale", type=float, dest="guidance_scale", default=7.5, help="guidance value for the generator")
 parser.add_argument("--steps", dest="steps", type=int, default=25, help="number of steps for the generator")
 parser.add_argument("--height", dest="height", type=int, default=384, help="height of the image")
@@ -84,8 +86,9 @@ else:
     next_index = 0
 
 sched_name = str(pipe.scheduler._class_name)
-info = f"{next_index:06} | prompt: {args.prompt} | scheduler: {sched_name} model: {args.model_path} steps: " + \
-       f"{args.steps} scale: {args.guidance_scale} height: {args.height} width: {args.width} seed: {seed}\n"
+info = f"{next_index:06} | prompt: {args.prompt} negative prompt: {args.neg_prompt} | scheduler: {sched_name} " + \
+       f"model: {args.model_path} steps: {args.steps} scale: {args.guidance_scale} height: {args.height} " + \
+       f"width: {args.width} seed: {seed}\n"
 with open(os.path.join(output_path, "history.txt"), "a") as log:
     log.write(info)
 
@@ -94,7 +97,7 @@ latents = get_latents_from_seed(seed, 1, args.height, args.width)
 
 start = time.time()
 images = pipe(
-    args.prompt, height=args.height, width=args.width, num_inference_steps=args.steps,
+    args.prompt, negative_prompt=args.neg_prompt, height=args.height, width=args.width, num_inference_steps=args.steps,
     guidance_scale=args.guidance_scale, latents=latents).images
 finish = time.time()
 
