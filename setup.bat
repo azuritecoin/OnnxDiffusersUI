@@ -3,7 +3,7 @@
 set first_run=0
 set venv_path="virtualenv"
 set model_path="model"
-set version_tag="v0.9.0"
+set version_tag="v0.10.0"
 
 :: check if programs are installed
 python --version 1> NUL 2> NUL
@@ -53,6 +53,7 @@ pip install --no-deps --ignore-installed "protobuf<4"
 :ScriptDownload
 if not exist onnxUI.py python -m wget https://raw.githubusercontent.com/azuritecoin/OnnxDiffusersUI/main/onnxUI.py
 if not exist txt2img_onnx.py python -m wget https://raw.githubusercontent.com/azuritecoin/OnnxDiffusersUI/main/txt2img_onnx.py
+if not exist lpw_pipe.py python -m wget https://raw.githubusercontent.com/azuritecoin/OnnxDiffusersUI/main/lpw_pipe.py
 
 if not exist convert_original_stable_diffusion_to_diffusers.py (
     python -m wget https://raw.githubusercontent.com/huggingface/diffusers/%version_tag%/scripts/convert_original_stable_diffusion_to_diffusers.py -o convert_original_stable_diffusion_to_diffusers.py
@@ -83,12 +84,16 @@ if exist onnxUI.py del onnxUI.py
 python -m wget https://raw.githubusercontent.com/azuritecoin/OnnxDiffusersUI/main/onnxUI.py
 if exist txt2img_onnx.py del txt2img_onnx.py
 python -m wget https://raw.githubusercontent.com/azuritecoin/OnnxDiffusersUI/main/txt2img_onnx.py
+if exist lpw_pipe.py del lpw_pipe.py
+python -m wget https://raw.githubusercontent.com/azuritecoin/OnnxDiffusersUI/main/lpw_pipe.py
 if exist convert_original_stable_diffusion_to_diffusers.py del convert_original_stable_diffusion_to_diffusers.py
 python -m wget https://raw.githubusercontent.com/huggingface/diffusers/%version_tag%/scripts/convert_original_stable_diffusion_to_diffusers.py -o convert_original_stable_diffusion_to_diffusers.py
 if exist convert_stable_diffusion_checkpoint_to_onnx.py del convert_stable_diffusion_checkpoint_to_onnx.py
 python -m wget https://raw.githubusercontent.com/huggingface/diffusers/%version_tag%/scripts/convert_stable_diffusion_checkpoint_to_onnx.py -o convert_stable_diffusion_checkpoint_to_onnx.py
 if exist v1-inference.yaml del v1-inference.yaml
 python -m wget https://raw.githubusercontent.com/CompVis/stable-diffusion/main/configs/stable-diffusion/v1-inference.yaml -o v1-inference.yaml
+if exist %lpw_path%\pipeline.py del %lpw_path%\pipeline.py
+python -m wget https://raw.githubusercontent.com/huggingface/diffusers/%version_tag%/examples/community/lpw_stable_diffusion_onnx.py -o %lpw_path%\pipeline.py
 
 :FinishSetup
 echo setup complete

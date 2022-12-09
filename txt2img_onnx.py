@@ -24,7 +24,6 @@ def get_latents_from_seed(seed: int, batch_size: int, height: int, width: int) -
     return image_latents
 
 
-
 parser = argparse.ArgumentParser(description="simple interface for ONNX based Stable Diffusion")
 parser.add_argument(
     "--model", dest="model_path", default="model/stable_diffusion_onnx", help="path to the model directory")
@@ -32,7 +31,7 @@ parser.add_argument(
     "--prompt", dest="prompt", default="a photo of an astronaut riding a horse on mars",
     help="input text prompt to generate image")
 parser.add_argument(
-    "--neg_prompt", dest="neg_prompt", default="",help="input text for negative prompt")
+    "--neg_prompt", dest="neg_prompt", default="", help="input text for negative prompt")
 parser.add_argument(
     "--guidance-scale", type=float, dest="guidance_scale", default=7.5, help="guidance value for the generator")
 parser.add_argument("--steps", dest="steps", type=int, default=25, help="number of steps for the generator")
@@ -40,7 +39,8 @@ parser.add_argument("--height", dest="height", type=int, default=384, help="heig
 parser.add_argument("--width", dest="width", type=int, default=384, help="width of the image")
 parser.add_argument("--seed", dest="seed", default="", help="seed for the generator")
 parser.add_argument("--cpu-only", action="store_true", default=False, help="run ONNX with CPU")
-parser.add_argument("--scheduler", dest="scheduler", default="pndm", help="schedulers: pndm, lms, ddim, ddpm, euler, eulera, dpms")
+parser.add_argument(
+    "--scheduler", dest="scheduler", default="pndm", help="schedulers: pndm, lms, ddim, ddpm, euler, eulera, dpms")
 args = parser.parse_args()
 
 if args.scheduler == "pndm":

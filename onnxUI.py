@@ -1,4 +1,5 @@
 import argparse
+import functools
 import gc
 import os
 import re
@@ -17,6 +18,8 @@ import gradio as gr
 import numpy as np
 from packaging import version
 import PIL
+
+import lpw_pipe
 
 
 # gradio function
@@ -38,7 +41,6 @@ def run_diffusers(
 ) -> Tuple[list, str]:
     global model_name
     global current_pipe
-    global current_legacy
     global pipe
 
     prompt.strip("\n")
@@ -84,7 +86,7 @@ def run_diffusers(
         with open(os.path.join(output_path, "history.txt"), "a") as log:
             log.write(info + "\n")
 
-        # create legacy generator object from seed
+        # create generator object from seed
         rng = np.random.RandomState(seeds[i])
 
         if current_pipe == "txt2img":
@@ -96,28 +98,19 @@ def run_diffusers(
         elif current_pipe == "img2img":
             start = time.time()
             batch_images = pipe(
-                prompt, negative_prompt=neg_prompt, init_image=init_image, height=height, width=width,
-                num_inference_steps=steps, guidance_scale=guidance_scale, eta=eta, strength=denoise_strength,
-                num_images_per_prompt=batch_size, generator=rng).images
+                prompt, negative_prompt=neg_prompt, image=init_image, num_inference_steps=steps,
+                guidance_scale=guidance_scale, eta=eta, strength=denoise_strength, num_images_per_prompt=batch_size,
+                generator=rng).images
             finish = time.time()
         elif current_pipe == "inpaint":
-            if current_legacy:
-                start = time.time()
-                batch_images = pipe(
-                    prompt, negative_prompt=neg_prompt, init_image=init_image, mask_image=init_mask, height=height,
-                    width=width, num_inference_steps=steps, guidance_scale=guidance_scale, eta=eta,
-                    num_images_per_prompt=batch_size, generator=rng).images
-                finish = time.time()
-            else:
-                start = time.time()
-                batch_images = pipe(
-                    prompt, negative_prompt=neg_prompt, image=init_image, mask_image=init_mask, height=height,
-                    width=width, num_inference_steps=steps, guidance_scale=guidance_scale, eta=eta,
-                    num_images_per_prompt=batch_size, generator=rng).images
-                finish = time.time()
+            start = time.time()
+            batch_images = pipe(
+                prompt, negative_prompt=neg_prompt, image=init_image, mask_image=init_mask, num_inference_steps=steps,
+                guidance_scale=guidance_scale, eta=eta, num_images_per_prompt=batch_size, generator=rng).images
+            finish = time.time()
 
         short_prompt = prompt.strip("<>:\"/\\|?*\n\t")
-        short_prompt = re.sub(r'[\\/*?:"<>|\n\t]',"",short_prompt)
+        short_prompt = re.sub(r'[\\/*?:"<>|\n\t]', "", short_prompt)
         short_prompt = short_prompt[:99] if len(short_prompt) > 100 else short_prompt
         for j in range(batch_size):
             batch_images[j].save(os.path.join(output_path, f"{next_index+i:06}-{j:02}.{short_prompt}.{image_format}"))
@@ -181,9 +174,10 @@ def generate_click(
     global current_tab
     global current_pipe
     global current_legacy
+    global release_memory
     global scheduler
     global pipe
-    
+
     # reset scheduler and pipeline if model is different
     if model_name != model_drop:
         model_name = model_drop
@@ -202,86 +196,85 @@ def generate_click(
         raise Exception("Unknown tab")
 
     if sched_name == "PNDM" and type(scheduler) is not PNDMScheduler:
-        scheduler = PNDMScheduler.from_config(model_path, subfolder="scheduler")
+        scheduler = PNDMScheduler.from_pretrained(model_path, subfolder="scheduler")
     elif sched_name == "LMS" and type(scheduler) is not LMSDiscreteScheduler:
-        scheduler = LMSDiscreteScheduler.from_config(model_path, subfolder="scheduler")
+        scheduler = LMSDiscreteScheduler.from_pretrained(model_path, subfolder="scheduler")
     elif sched_name == "DDIM" and type(scheduler) is not DDIMScheduler:
-        scheduler = DDIMScheduler.from_config(model_path, subfolder="scheduler")
+        scheduler = DDIMScheduler.from_pretrained(model_path, subfolder="scheduler")
     elif sched_name == "DDPM" and type(scheduler) is not DDPMScheduler:
-        scheduler = DDPMScheduler.from_config(model_path, subfolder="scheduler")
+        scheduler = DDPMScheduler.from_pretrained(model_path, subfolder="scheduler")
     elif sched_name == "Euler" and type(scheduler) is not EulerDiscreteScheduler:
-        scheduler = EulerDiscreteScheduler.from_config(model_path, subfolder="scheduler")
+        scheduler = EulerDiscreteScheduler.from_pretrained(model_path, subfolder="scheduler")
     elif sched_name == "EulerA" and type(scheduler) is not EulerAncestralDiscreteScheduler:
-        scheduler = EulerAncestralDiscreteScheduler.from_config(model_path, subfolder="scheduler")
+        scheduler = EulerAncestralDiscreteScheduler.from_pretrained(model_path, subfolder="scheduler")
     elif sched_name == "DPMS" and type(scheduler) is not DPMSolverMultistepScheduler:
-        scheduler = DPMSolverMultistepScheduler.from_config(model_path, subfolder="scheduler")
-
-    # select safety_checker based on version
-    if version.parse(_df_version) >= version.parse("0.8.0"):
-        safety_checker = None
-    else:
-        safety_checker = lambda images, **kwargs: (images, [False] * len(images))
+        scheduler = DPMSolverMultistepScheduler.from_pretrained(model_path, subfolder="scheduler")
 
     # select which pipeline depending on current tab
     if current_tab == 0:
         if current_pipe != "txt2img" or pipe is None:
             pipe = OnnxStableDiffusionPipeline.from_pretrained(
                 model_path, provider=provider, scheduler=scheduler)
-            pipe.safety_checker=safety_checker
-            gc.collect()
         current_pipe = "txt2img"
-
-        if type(pipe.scheduler) is not type(scheduler):
-            pipe.scheduler = scheduler
-
-        return run_diffusers(
-            prompt_t0, neg_prompt_t0, None, None, iter_t0, batch_t0, steps_t0, guid_t0, height_t0, width_t0, eta_t0, 0,
-            seed_t0, fmt_t0)
     elif current_tab == 1:
         if current_pipe != "img2img" or pipe is None:
             pipe = OnnxStableDiffusionImg2ImgPipeline.from_pretrained(
                 model_path, provider=provider, scheduler=scheduler)
-            pipe.safety_checker=safety_checker
-            gc.collect()
         current_pipe = "img2img"
-
-        if type(pipe.scheduler) is not type(scheduler):
-            pipe.scheduler = scheduler
-
-        # input image resizing
-        input_image = image_t1.convert("RGB")
-        input_image = resize_and_crop(input_image, height_t1, width_t1)
-
-        return run_diffusers(
-            prompt_t1, neg_prompt_t1, input_image, None, iter_t1, batch_t1, steps_t1, guid_t1, height_t1, width_t1,
-            eta_t1, denoise_t1, seed_t1, fmt_t1)
     elif current_tab == 2:
         if current_pipe != "inpaint" or pipe is None or current_legacy != legacy_t2:
             if legacy_t2:
                 pipe = OnnxStableDiffusionInpaintPipelineLegacy.from_pretrained(
                     model_path, provider=provider, scheduler=scheduler)
-                pipe.safety_checker=safety_checker
             else:
                 pipe = OnnxStableDiffusionInpaintPipeline.from_pretrained(
                     model_path, provider=provider, scheduler=scheduler)
-                pipe.safety_checker=safety_checker
-            gc.collect()
         current_pipe = "inpaint"
         current_legacy = legacy_t2
 
-        if type(pipe.scheduler) is not type(scheduler):
-            pipe.scheduler = scheduler
+    # manual garbage collection
+    gc.collect()
 
+    # modifying the methods in the pipeline object
+    if type(pipe.scheduler) is not type(scheduler):
+        pipe.scheduler = scheduler
+    if version.parse(_df_version) >= version.parse("0.8.0"):
+        safety_checker = None
+    else:
+        safety_checker = lambda images, **kwargs: (images, [False] * len(images))
+    pipe.safety_checker = safety_checker
+    pipe._encode_prompt = functools.partial(lpw_pipe._encode_prompt, pipe)
+
+    # run the pipeline with the correct parameters
+    if current_tab == 0:
+        images, status = run_diffusers(
+            prompt_t0, neg_prompt_t0, None, None, iter_t0, batch_t0, steps_t0, guid_t0, height_t0, width_t0, eta_t0, 0,
+            seed_t0, fmt_t0)
+    elif current_tab == 1:
         # input image resizing
+        input_image = image_t1.convert("RGB")
+        input_image = resize_and_crop(input_image, height_t1, width_t1)
+
+        images, status = run_diffusers(
+            prompt_t1, neg_prompt_t1, input_image, None, iter_t1, batch_t1, steps_t1, guid_t1, height_t1, width_t1,
+            eta_t1, denoise_t1, seed_t1, fmt_t1)
+    elif current_tab == 2:
         input_image = image_t2["image"].convert("RGB")
         input_image = resize_and_crop(input_image, height_t2, width_t2)
-        
+
         input_mask = image_t2["mask"].convert("RGB")
         input_mask = resize_and_crop(input_mask, height_t2, width_t2)
 
-        return run_diffusers(
+        images, status = run_diffusers(
             prompt_t2, neg_prompt_t2, input_image, input_mask, iter_t2, batch_t2, steps_t2, guid_t2, height_t2,
             width_t2, eta_t2, 0, seed_t2, fmt_t2)
+
+    if release_memory:
+        pipe = None
+        gc.collect()
+
+    return images, status
+
 
 def select_tab0():
     global current_tab
@@ -308,6 +301,9 @@ def choose_sch(sched_name: str):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="gradio interface for ONNX based Stable Diffusion")
     parser.add_argument("--cpu-only", action="store_true", default=False, help="run ONNX with CPU")
+    parser.add_argument(
+        "--release-memory", action="store_true", default=False,
+        help="de-allocate the pipeline and release memory after generation")
     args = parser.parse_args()
 
     # variables for ONNX pipelines
@@ -316,19 +312,21 @@ if __name__ == "__main__":
     current_tab = 0
     current_pipe = "txt2img"
     current_legacy = False
+    release_memory = args.release_memory
 
     # diffusers objects
     scheduler = None
     pipe = None
 
     # check versions
-    is_v_0_4 = version.parse(_df_version) >= version.parse("0.4.0")
-    is_v_0_6 = version.parse(_df_version) >= version.parse("0.6.0")
     is_v_0_8 = version.parse(_df_version) >= version.parse("0.8.0")
     is_v_dev = version.parse(_df_version).is_prerelease
-    
+
     # prerelease version use warning
-    print("You are using diffusers " + str(version.parse(_df_version)) + " (prerelease)\nIf you experience unexpected errors please run `pip install diffusers --force-reinstall`.") if is_v_dev else False
+    if is_v_dev:
+        print(
+            "You are using diffusers " + str(version.parse(_df_version)) + " (prerelease)\n" +
+            "If you experience unexpected errors please run `pip install diffusers --force-reinstall`.")
 
     # custom css
     custom_css = """
@@ -368,17 +366,17 @@ if __name__ == "__main__":
     title = "Stable Diffusion ONNX"
     with gr.Blocks(title=title, css=custom_css) as demo:
         with gr.Row():
-                with gr.Column(scale=13, min_width=650):
-                    model_drop = gr.Dropdown(model_list, value=default_model, label="model folder", interactive=True)
-                with gr.Column(scale=11, min_width=550):
-                    with gr.Row():
-                        gen_btn = gr.Button("Generate", variant="primary", elem_id="gen_button")
-                        clear_btn = gr.Button("Clear", elem_id="gen_button")
+            with gr.Column(scale=13, min_width=650):
+                model_drop = gr.Dropdown(model_list, value=default_model, label="model folder", interactive=True)
+            with gr.Column(scale=11, min_width=550):
+                with gr.Row():
+                    gen_btn = gr.Button("Generate", variant="primary", elem_id="gen_button")
+                    clear_btn = gr.Button("Clear", elem_id="gen_button")
         with gr.Row():
             with gr.Column(scale=13, min_width=650):
                 with gr.Tab(label="txt2img") as tab0:
                     prompt_t0 = gr.Textbox(value="", lines=2, label="prompt")
-                    neg_prompt_t0 = gr.Textbox(value="", lines=2, label="negative prompt", visible=is_v_0_4)
+                    neg_prompt_t0 = gr.Textbox(value="", lines=2, label="negative prompt")
                     sch_t0 = gr.Radio(sched_list, value="PNDM", label="scheduler")
                     with gr.Row():
                         iter_t0 = gr.Slider(1, 24, value=1, step=1, label="iteration count")
@@ -390,9 +388,9 @@ if __name__ == "__main__":
                     eta_t0 = gr.Slider(0, 1, value=0.0, step=0.01, label="DDIM eta", interactive=False)
                     seed_t0 = gr.Textbox(value="", max_lines=1, label="seed")
                     fmt_t0 = gr.Radio(["png", "jpg"], value="png", label="image format")
-                with gr.Tab(label="img2img", visible=is_v_0_6) as tab1:
+                with gr.Tab(label="img2img") as tab1:
                     prompt_t1 = gr.Textbox(value="", lines=2, label="prompt")
-                    neg_prompt_t1 = gr.Textbox(value="", lines=2, label="negative prompt", visible=is_v_0_4)
+                    neg_prompt_t1 = gr.Textbox(value="", lines=2, label="negative prompt")
                     sch_t1 = gr.Radio(sched_list, value="PNDM", label="scheduler")
                     image_t1 = gr.Image(label="input image", type="pil", elem_id="image_init")
                     with gr.Row():
@@ -406,9 +404,9 @@ if __name__ == "__main__":
                     denoise_t1 = gr.Slider(0, 1, value=0.8, step=0.01, label="denoise strength")
                     seed_t1 = gr.Textbox(value="", max_lines=1, label="seed")
                     fmt_t1 = gr.Radio(["png", "jpg"], value="png", label="image format")
-                with gr.Tab(label="inpainting", visible=is_v_0_8) as tab2:
+                with gr.Tab(label="inpainting") as tab2:
                     prompt_t2 = gr.Textbox(value="", lines=2, label="prompt")
-                    neg_prompt_t2 = gr.Textbox(value="", lines=2, label="negative prompt", visible=is_v_0_4)
+                    neg_prompt_t2 = gr.Textbox(value="", lines=2, label="negative prompt")
                     sch_t2 = gr.Radio(sched_list, value="PNDM", label="scheduler")
                     legacy_t2 = gr.Checkbox(value=False, label="legacy inpaint")
                     image_t2 = gr.Image(
@@ -432,7 +430,7 @@ if __name__ == "__main__":
             prompt_t0, neg_prompt_t0, sch_t0, iter_t0, batch_t0, steps_t0, guid_t0, height_t0, width_t0, eta_t0,
             seed_t0, fmt_t0]
         tab1_inputs = [
-            prompt_t1, neg_prompt_t1, image_t1, sch_t1, iter_t1, batch_t1, steps_t1, guid_t1, height_t1,width_t1,
+            prompt_t1, neg_prompt_t1, image_t1, sch_t1, iter_t1, batch_t1, steps_t1, guid_t1, height_t1, width_t1,
             eta_t1, denoise_t1, seed_t1, fmt_t1]
         tab2_inputs = [
             prompt_t2, neg_prompt_t2, sch_t2, legacy_t2, image_t2, iter_t2, batch_t2, steps_t2, guid_t2, height_t2,
