@@ -1,4 +1,5 @@
 import argparse
+import functools
 import gc
 import os
 import re
@@ -17,7 +18,8 @@ import gradio as gr
 import numpy as np
 from packaging import version
 import PIL
-import torch
+
+import lpw_pipe
 
 
 # gradio function
@@ -39,7 +41,6 @@ def run_diffusers(
 ) -> Tuple[list, str]:
     global model_name
     global current_pipe
-    global release_memory
     global pipe
 
     prompt.strip("\n")
@@ -86,9 +87,7 @@ def run_diffusers(
             log.write(info + "\n")
 
         # create generator object from seed
-        # rng = np.random.RandomState(seeds[i])
-        rng = torch.Generator()  # NOTE community pipeline `lpw_stable_diffusion_onnx.py` needs torch.Generator
-        rng.manual_seed(int(seeds[i]))
+        rng = np.random.RandomState(seeds[i])
 
         if current_pipe == "txt2img":
             start = time.time()
@@ -99,16 +98,15 @@ def run_diffusers(
         elif current_pipe == "img2img":
             start = time.time()
             batch_images = pipe(
-                prompt, negative_prompt=neg_prompt, image=init_image, height=height, width=width,
-                num_inference_steps=steps, guidance_scale=guidance_scale, eta=eta, strength=denoise_strength,
-                num_images_per_prompt=batch_size, generator=rng).images
+                prompt, negative_prompt=neg_prompt, image=init_image, num_inference_steps=steps,
+                guidance_scale=guidance_scale, eta=eta, strength=denoise_strength, num_images_per_prompt=batch_size,
+                generator=rng).images
             finish = time.time()
         elif current_pipe == "inpaint":
             start = time.time()
             batch_images = pipe(
-                prompt, negative_prompt=neg_prompt, image=init_image, mask_image=init_mask, height=height,
-                width=width, num_inference_steps=steps, guidance_scale=guidance_scale, eta=eta,
-                num_images_per_prompt=batch_size, generator=rng).images
+                prompt, negative_prompt=neg_prompt, image=init_image, mask_image=init_mask, num_inference_steps=steps,
+                guidance_scale=guidance_scale, eta=eta, num_images_per_prompt=batch_size, generator=rng).images
             finish = time.time()
 
         short_prompt = prompt.strip("<>:\"/\\|?*\n\t")
@@ -128,10 +126,6 @@ def run_diffusers(
     else:
         status = f"Run index {next_index:06} took {time_taken:.1f} minutes to generate a batch size of " + \
             f"{batch_size}. seed: {seeds[0]}"
-
-    if release_memory:
-        pipe = None
-        gc.collect()
 
     return images, status
 
@@ -180,6 +174,7 @@ def generate_click(
     global current_tab
     global current_pipe
     global current_legacy
+    global release_memory
     global scheduler
     global pipe
     
@@ -215,72 +210,70 @@ def generate_click(
     elif sched_name == "DPMS" and type(scheduler) is not DPMSolverMultistepScheduler:
         scheduler = DPMSolverMultistepScheduler.from_pretrained(model_path, subfolder="scheduler")
 
-    # select safety_checker based on version
-    if version.parse(_df_version) >= version.parse("0.8.0"):
-        safety_checker = None
-    else:
-        safety_checker = lambda images, **kwargs: (images, [False] * len(images))
-
     # select which pipeline depending on current tab
     if current_tab == 0:
         if current_pipe != "txt2img" or pipe is None:
             pipe = OnnxStableDiffusionPipeline.from_pretrained(
-                model_path, provider=provider, scheduler=scheduler, custom_pipeline="./lpw_onnx/")
-            pipe.safety_checker=safety_checker
-            gc.collect()
+                model_path, provider=provider, scheduler=scheduler)
         current_pipe = "txt2img"
-
-        if type(pipe.scheduler) is not type(scheduler):
-            pipe.scheduler = scheduler
-
-        return run_diffusers(
-            prompt_t0, neg_prompt_t0, None, None, iter_t0, batch_t0, steps_t0, guid_t0, height_t0, width_t0, eta_t0, 0,
-            seed_t0, fmt_t0)
     elif current_tab == 1:
         if current_pipe != "img2img" or pipe is None:
             pipe = OnnxStableDiffusionImg2ImgPipeline.from_pretrained(
-                model_path, provider=provider, scheduler=scheduler, custom_pipeline="./lpw_onnx/")
-            pipe.safety_checker=safety_checker
-            gc.collect()
+                model_path, provider=provider, scheduler=scheduler)
         current_pipe = "img2img"
-
-        if type(pipe.scheduler) is not type(scheduler):
-            pipe.scheduler = scheduler
-
-        # input image resizing
-        input_image = image_t1.convert("RGB")
-        input_image = resize_and_crop(input_image, height_t1, width_t1)
-
-        return run_diffusers(
-            prompt_t1, neg_prompt_t1, input_image, None, iter_t1, batch_t1, steps_t1, guid_t1, height_t1, width_t1,
-            eta_t1, denoise_t1, seed_t1, fmt_t1)
     elif current_tab == 2:
         if current_pipe != "inpaint" or pipe is None or current_legacy != legacy_t2:
             if legacy_t2:
                 pipe = OnnxStableDiffusionInpaintPipelineLegacy.from_pretrained(
-                    model_path, provider=provider, scheduler=scheduler, custom_pipeline="./lpw_onnx/")
-                pipe.safety_checker=safety_checker
+                    model_path, provider=provider, scheduler=scheduler)
             else:
                 pipe = OnnxStableDiffusionInpaintPipeline.from_pretrained(
-                    model_path, provider=provider, scheduler=scheduler, custom_pipeline="./lpw__onnx/")
-                pipe.safety_checker=safety_checker
-            gc.collect()
+                    model_path, provider=provider, scheduler=scheduler)
         current_pipe = "inpaint"
         current_legacy = legacy_t2
 
-        if type(pipe.scheduler) is not type(scheduler):
-            pipe.scheduler = scheduler
+    # manual garbage collection
+    gc.collect()
 
+    # modifying the methods in the pipeline object
+    if type(pipe.scheduler) is not type(scheduler):
+            pipe.scheduler = scheduler
+    if version.parse(_df_version) >= version.parse("0.8.0"):
+        safety_checker = None
+    else:
+        safety_checker = lambda images, **kwargs: (images, [False] * len(images))
+    pipe.safety_checker=safety_checker
+    pipe._encode_prompt = functools.partial(lpw_pipe._encode_prompt, pipe)
+
+    # run the pipeline with the correct parameters
+    if current_tab == 0:
+        images, status = run_diffusers(
+            prompt_t0, neg_prompt_t0, None, None, iter_t0, batch_t0, steps_t0, guid_t0, height_t0, width_t0, eta_t0, 0,
+            seed_t0, fmt_t0)
+    elif current_tab == 1:
         # input image resizing
+        input_image = image_t1.convert("RGB")
+        input_image = resize_and_crop(input_image, height_t1, width_t1)
+
+        images, status = run_diffusers(
+            prompt_t1, neg_prompt_t1, input_image, None, iter_t1, batch_t1, steps_t1, guid_t1, height_t1, width_t1,
+            eta_t1, denoise_t1, seed_t1, fmt_t1)
+    elif current_tab == 2:
         input_image = image_t2["image"].convert("RGB")
         input_image = resize_and_crop(input_image, height_t2, width_t2)
         
         input_mask = image_t2["mask"].convert("RGB")
         input_mask = resize_and_crop(input_mask, height_t2, width_t2)
 
-        return run_diffusers(
+        images, status = run_diffusers(
             prompt_t2, neg_prompt_t2, input_image, input_mask, iter_t2, batch_t2, steps_t2, guid_t2, height_t2,
             width_t2, eta_t2, 0, seed_t2, fmt_t2)
+    
+    if release_memory:
+        pipe = None
+        gc.collect()
+    
+    return images, status
 
 def select_tab0():
     global current_tab
