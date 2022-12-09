@@ -110,7 +110,7 @@ def run_diffusers(
             finish = time.time()
 
         short_prompt = prompt.strip("<>:\"/\\|?*\n\t")
-        short_prompt = re.sub(r'[\\/*?:"<>|\n\t]',"",short_prompt)
+        short_prompt = re.sub(r'[\\/*?:"<>|\n\t]', "", short_prompt)
         short_prompt = short_prompt[:99] if len(short_prompt) > 100 else short_prompt
         for j in range(batch_size):
             batch_images[j].save(os.path.join(output_path, f"{next_index+i:06}-{j:02}.{short_prompt}.{image_format}"))
@@ -177,7 +177,7 @@ def generate_click(
     global release_memory
     global scheduler
     global pipe
-    
+
     # reset scheduler and pipeline if model is different
     if model_name != model_drop:
         model_name = model_drop
@@ -237,12 +237,12 @@ def generate_click(
 
     # modifying the methods in the pipeline object
     if type(pipe.scheduler) is not type(scheduler):
-            pipe.scheduler = scheduler
+        pipe.scheduler = scheduler
     if version.parse(_df_version) >= version.parse("0.8.0"):
         safety_checker = None
     else:
         safety_checker = lambda images, **kwargs: (images, [False] * len(images))
-    pipe.safety_checker=safety_checker
+    pipe.safety_checker = safety_checker
     pipe._encode_prompt = functools.partial(lpw_pipe._encode_prompt, pipe)
 
     # run the pipeline with the correct parameters
@@ -261,19 +261,20 @@ def generate_click(
     elif current_tab == 2:
         input_image = image_t2["image"].convert("RGB")
         input_image = resize_and_crop(input_image, height_t2, width_t2)
-        
+
         input_mask = image_t2["mask"].convert("RGB")
         input_mask = resize_and_crop(input_mask, height_t2, width_t2)
 
         images, status = run_diffusers(
             prompt_t2, neg_prompt_t2, input_image, input_mask, iter_t2, batch_t2, steps_t2, guid_t2, height_t2,
             width_t2, eta_t2, 0, seed_t2, fmt_t2)
-    
+
     if release_memory:
         pipe = None
         gc.collect()
-    
+
     return images, status
+
 
 def select_tab0():
     global current_tab
@@ -320,10 +321,11 @@ if __name__ == "__main__":
     # check versions
     is_v_0_8 = version.parse(_df_version) >= version.parse("0.8.0")
     is_v_dev = version.parse(_df_version).is_prerelease
-    
+
     # prerelease version use warning
     if is_v_dev:
-        print("You are using diffusers " + str(version.parse(_df_version)) + " (prerelease)\n" + \
+        print(
+            "You are using diffusers " + str(version.parse(_df_version)) + " (prerelease)\n" +
             "If you experience unexpected errors please run `pip install diffusers --force-reinstall`.")
 
     # custom css
@@ -364,12 +366,12 @@ if __name__ == "__main__":
     title = "Stable Diffusion ONNX"
     with gr.Blocks(title=title, css=custom_css) as demo:
         with gr.Row():
-                with gr.Column(scale=13, min_width=650):
-                    model_drop = gr.Dropdown(model_list, value=default_model, label="model folder", interactive=True)
-                with gr.Column(scale=11, min_width=550):
-                    with gr.Row():
-                        gen_btn = gr.Button("Generate", variant="primary", elem_id="gen_button")
-                        clear_btn = gr.Button("Clear", elem_id="gen_button")
+            with gr.Column(scale=13, min_width=650):
+                model_drop = gr.Dropdown(model_list, value=default_model, label="model folder", interactive=True)
+            with gr.Column(scale=11, min_width=550):
+                with gr.Row():
+                    gen_btn = gr.Button("Generate", variant="primary", elem_id="gen_button")
+                    clear_btn = gr.Button("Clear", elem_id="gen_button")
         with gr.Row():
             with gr.Column(scale=13, min_width=650):
                 with gr.Tab(label="txt2img") as tab0:
@@ -428,7 +430,7 @@ if __name__ == "__main__":
             prompt_t0, neg_prompt_t0, sch_t0, iter_t0, batch_t0, steps_t0, guid_t0, height_t0, width_t0, eta_t0,
             seed_t0, fmt_t0]
         tab1_inputs = [
-            prompt_t1, neg_prompt_t1, image_t1, sch_t1, iter_t1, batch_t1, steps_t1, guid_t1, height_t1,width_t1,
+            prompt_t1, neg_prompt_t1, image_t1, sch_t1, iter_t1, batch_t1, steps_t1, guid_t1, height_t1, width_t1,
             eta_t1, denoise_t1, seed_t1, fmt_t1]
         tab2_inputs = [
             prompt_t2, neg_prompt_t2, sch_t2, legacy_t2, image_t2, iter_t2, batch_t2, steps_t2, guid_t2, height_t2,

@@ -1,5 +1,6 @@
 '''
-This code is copied from https://github.com/huggingface/diffusers/blob/v0.10.0/examples/community/lpw_stable_diffusion_onnx.py
+This code is copied from:
+https://github.com/huggingface/diffusers/blob/v0.10.0/examples/community/lpw_stable_diffusion_onnx.py
 '''
 
 
@@ -353,7 +354,6 @@ def get_weighted_text_embeddings(
         return text_embeddings, uncond_embeddings
 
     return text_embeddings
-
 
 
 def _encode_prompt(
