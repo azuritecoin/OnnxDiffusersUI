@@ -3,7 +3,8 @@
 set first_run=0
 set venv_path="virtualenv"
 set model_path="model"
-set version_tag="v0.9.0"
+set lpw_path="lpw_onnx"
+set version_tag="v0.10.0"
 
 :: check if programs are installed
 python --version 1> NUL 2> NUL
@@ -65,6 +66,11 @@ if not exist v1-inference.yaml (
 )
 
 if not exist %model_path% mkdir %model_path%
+if not exist %lpw_path% mkdir %lpw_path%
+
+if not exist %lpw_path%\pipeline.py (
+    python -m wget https://raw.githubusercontent.com/huggingface/diffusers/%version_tag%/examples/community/lpw_stable_diffusion_onnx.py -o %lpw_path%\pipeline.py
+)
 
 :: update the python packages and redownload onnxUI.py
 if %first_run% NEQ 0 goto FinishSetup
@@ -89,6 +95,8 @@ if exist convert_stable_diffusion_checkpoint_to_onnx.py del convert_stable_diffu
 python -m wget https://raw.githubusercontent.com/huggingface/diffusers/%version_tag%/scripts/convert_stable_diffusion_checkpoint_to_onnx.py -o convert_stable_diffusion_checkpoint_to_onnx.py
 if exist v1-inference.yaml del v1-inference.yaml
 python -m wget https://raw.githubusercontent.com/CompVis/stable-diffusion/main/configs/stable-diffusion/v1-inference.yaml -o v1-inference.yaml
+if exist %lpw_path%\pipeline.py del %lpw_path%\pipeline.py
+python -m wget https://raw.githubusercontent.com/huggingface/diffusers/%version_tag%/examples/community/lpw_stable_diffusion_onnx.py -o %lpw_path%\pipeline.py
 
 :FinishSetup
 echo setup complete
