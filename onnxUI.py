@@ -77,10 +77,10 @@ def run_diffusers(
     time_taken = 0
     for i in range(iteration_count):
         print(f"iteration {i+1}/{iteration_count}")
-
-        info = f"{next_index+i:06} | prompt: {prompt} negative prompt: {neg_prompt} | scheduler: {sched_name} " + \
-            f"model: {model_name} iteration size: {iteration_count} batch size: {batch_size} steps: {steps} " + \
-            f"scale: {guidance_scale} height: {height} width: {width} eta: {eta} seed: {seeds[i]}"
+        
+        info = f"{next_index+i:06}:\nprompt: {prompt}\nnegative prompt: {neg_prompt}\nscheduler: {sched_name} | " + \
+            f"model: {model_name} | steps: {steps} | guidance: {guidance_scale} | batch size: {batch_size} | " + \
+            f"scale: {guidance_scale} | height: {height} | width: {width} | seed: {seeds[i]} | eta: {eta} |  iteration size: {iteration_count}"
         if (current_pipe == "img2img"):
             info = info + f" denoise: {denoise_strength}"
         with open(os.path.join(output_path, "history.txt"), "a") as log:
