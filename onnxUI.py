@@ -259,10 +259,30 @@ def generate_click(
         # adjust steps to account for denoise.
         steps_t1_old = steps_t1
         steps_t1 = ceil(steps_t1 / denoise_t1)
-        print()
-        print(f"Adjusting steps to account for denoise. From {steps_t1_old} to {steps_t1} steps internally.")
-        print(f"Without adjustment the actual step count would be ~{ceil(steps_t1_old * denoise_t1)} steps.")
-        print()
+        if steps_t1 > 1000 and sch_t1 == "DPMS":
+            steps_t1_unreduced = steps_t1
+            steps_t1 = 1000
+            print()
+            print(
+                f"Adjusting steps to account for denoise. From {steps_t1_old} to {steps_t1_unreduced} steps internally."
+            )
+            print(
+                f"Without adjustment the actual step count would be ~{ceil(steps_t1_old * denoise_t1)} steps."
+            )
+            print()
+            print(
+                f"INTERNAL STEP COUNT EXCEEDS 1000 MAX FOR DPMS. INTERNAL STEPS WILL BE REDUCED TO 1000."
+            )
+            print()
+        else:
+            print()
+            print(
+                f"Adjusting steps to account for denoise. From {steps_t1_old} to {steps_t1} steps internally."
+            )
+            print(
+                f"Without adjustment the actual step count would be ~{ceil(steps_t1_old * denoise_t1)} steps."
+            )
+            print()
 
         images, status = run_diffusers(
             prompt_t1, neg_prompt_t1, input_image, None, iter_t1, batch_t1, steps_t1, guid_t1, height_t1, width_t1,
@@ -282,8 +302,12 @@ def generate_click(
             elif steps_t2 >= 5:
                 steps_t2 = int((steps_t2 / 0.7989) + 1)
             print()
-            print(f"Adjusting steps for legacy inpaint. From {steps_t2_old} to {steps_t2} internally.")
-            print(f"Without adjustment the actual step count would be ~{int(steps_t2_old * 0.80)} steps.")
+            print(
+                f"Adjusting steps for legacy inpaint. From {steps_t2_old} to {steps_t2} internally."
+            )
+            print(
+                f"Without adjustment the actual step count would be ~{int(steps_t2_old * 0.8)} steps."
+            )
             print()
 
         images, status = run_diffusers(
