@@ -274,14 +274,16 @@ def generate_click(
         input_mask = image_t2["mask"].convert("RGB")
         input_mask = resize_and_crop(input_mask, height_t2, width_t2)
         
-        # adjust steps to account for legacy inpaint only using 80% of set steps.
+        # adjust steps to account for legacy inpaint only using ~80% of set steps.
         if legacy_t2 is True:
             steps_t2_old = steps_t2
-            steps_t2 = int(steps_t2 / 0.8)
+            if steps_t2 < 5:
+                steps_t2 = steps_t2 + 1
+            elif steps_t2 >= 5:
+                steps_t2 = int((steps_t2 / 0.7989) + 1)
             print()
             print(f"Adjusting steps for legacy inpaint. From {steps_t2_old} to {steps_t2} internally.")
-            print(f"Without adjustment the actual step count would be ~{ceil(steps_t2_old * 0.8)} steps.")
-            print(f"Will only run {steps_t2_old} steps in actuality though. IDK what causes it. Quick fix.")
+            print(f"Without adjustment the actual step count would be ~{int(steps_t2_old * 0.80)} steps.")
             print()
 
         images, status = run_diffusers(
