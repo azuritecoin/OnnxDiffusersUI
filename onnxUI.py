@@ -37,7 +37,8 @@ def run_diffusers(
     eta: float,
     denoise_strength: Optional[float],
     seed: str,
-    image_format: str
+    image_format: str,
+    legacy_t2: bool
 ) -> Tuple[list, str]:
     global model_name
     global current_pipe
@@ -104,9 +105,32 @@ def run_diffusers(
             finish = time.time()
         elif current_pipe == "inpaint":
             start = time.time()
-            batch_images = pipe(
-                prompt, negative_prompt=neg_prompt, image=init_image, mask_image=init_mask, num_inference_steps=steps,
-                guidance_scale=guidance_scale, eta=eta, num_images_per_prompt=batch_size, generator=rng).images
+            if legacy_t2 is True:
+                batch_images = pipe(
+                    prompt,
+                    negative_prompt=neg_prompt,
+                    image=init_image,
+                    mask_image=init_mask,
+                    num_inference_steps=steps,
+                    guidance_scale=guidance_scale,
+                    eta=eta,
+                    num_images_per_prompt=batch_size,
+                    generator=rng,
+                ).images
+            else:
+                batch_images = pipe(
+                    prompt,
+                    negative_prompt=neg_prompt,
+                    image=init_image,
+                    mask_image=init_mask,
+                    height=height,
+                    width=width,
+                    num_inference_steps=steps,
+                    guidance_scale=guidance_scale,
+                    eta=eta,
+                    num_images_per_prompt=batch_size,
+                    generator=rng,
+                ).images
             finish = time.time()
 
         short_prompt = prompt.strip("<>:\"/\\|?*\n\t")
