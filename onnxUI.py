@@ -291,7 +291,7 @@ def generate_click(
 
         images, status = run_diffusers(
             prompt_t2, neg_prompt_t2, input_image, input_mask, iter_t2, batch_t2, steps_t2, guid_t2, height_t2,
-            width_t2, eta_t2, 0, seed_t2, fmt_t2, None)
+            width_t2, eta_t2, 0, seed_t2, fmt_t2, legacy_t2)
 
     if release_memory:
         pipe = None
