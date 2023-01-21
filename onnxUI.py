@@ -5,6 +5,7 @@ import os
 import re
 import time
 from typing import Optional, Tuple
+from math import ceil
 
 from diffusers import (
     OnnxStableDiffusionPipeline,
@@ -254,6 +255,34 @@ def generate_click(
         # input image resizing
         input_image = image_t1.convert("RGB")
         input_image = resize_and_crop(input_image, height_t1, width_t1)
+        
+        # adjust steps to account for denoise.
+        steps_t1_old = steps_t1
+        steps_t1 = ceil(steps_t1 / denoise_t1)
+        if steps_t1 > 1000 and sch_t1 == "DPMS":
+            steps_t1_unreduced = steps_t1
+            steps_t1 = 1000
+            print()
+            print(
+                f"Adjusting steps to account for denoise. From {steps_t1_old} to {steps_t1_unreduced} steps internally."
+            )
+            print(
+                f"Without adjustment the actual step count would be ~{ceil(steps_t1_old * denoise_t1)} steps."
+            )
+            print()
+            print(
+                f"INTERNAL STEP COUNT EXCEEDS 1000 MAX FOR DPMS. INTERNAL STEPS WILL BE REDUCED TO 1000."
+            )
+            print()
+        else:
+            print()
+            print(
+                f"Adjusting steps to account for denoise. From {steps_t1_old} to {steps_t1} steps internally."
+            )
+            print(
+                f"Without adjustment the actual step count would be ~{ceil(steps_t1_old * denoise_t1)} steps."
+            )
+            print()
 
         images, status = run_diffusers(
             prompt_t1, neg_prompt_t1, input_image, None, iter_t1, batch_t1, steps_t1, guid_t1, height_t1, width_t1,
@@ -264,6 +293,22 @@ def generate_click(
 
         input_mask = image_t2["mask"].convert("RGB")
         input_mask = resize_and_crop(input_mask, height_t2, width_t2)
+        
+        # adjust steps to account for legacy inpaint only using ~80% of set steps.
+        if legacy_t2 is True:
+            steps_t2_old = steps_t2
+            if steps_t2 < 5:
+                steps_t2 = steps_t2 + 1
+            elif steps_t2 >= 5:
+                steps_t2 = int((steps_t2 / 0.7989) + 1)
+            print()
+            print(
+                f"Adjusting steps for legacy inpaint. From {steps_t2_old} to {steps_t2} internally."
+            )
+            print(
+                f"Without adjustment the actual step count would be ~{int(steps_t2_old * 0.8)} steps."
+            )
+            print()
 
         images, status = run_diffusers(
             prompt_t2, neg_prompt_t2, input_image, input_mask, iter_t2, batch_t2, steps_t2, guid_t2, height_t2,
