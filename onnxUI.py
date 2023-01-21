@@ -38,7 +38,8 @@ def run_diffusers(
     eta: float,
     denoise_strength: Optional[float],
     seed: str,
-    image_format: str
+    image_format: str,
+    legacy: bool
 ) -> Tuple[list, str]:
     global model_name
     global current_pipe
@@ -105,9 +106,32 @@ def run_diffusers(
             finish = time.time()
         elif current_pipe == "inpaint":
             start = time.time()
-            batch_images = pipe(
-                prompt, negative_prompt=neg_prompt, image=init_image, mask_image=init_mask, num_inference_steps=steps,
-                guidance_scale=guidance_scale, eta=eta, num_images_per_prompt=batch_size, generator=rng).images
+            if legacy is True:
+                batch_images = pipe(
+                    prompt,
+                    negative_prompt=neg_prompt,
+                    image=init_image,
+                    mask_image=init_mask,
+                    num_inference_steps=steps,
+                    guidance_scale=guidance_scale,
+                    eta=eta,
+                    num_images_per_prompt=batch_size,
+                    generator=rng,
+                ).images
+            else:
+                batch_images = pipe(
+                    prompt,
+                    negative_prompt=neg_prompt,
+                    image=init_image,
+                    mask_image=init_mask,
+                    height=height,
+                    width=width,
+                    num_inference_steps=steps,
+                    guidance_scale=guidance_scale,
+                    eta=eta,
+                    num_images_per_prompt=batch_size,
+                    generator=rng,
+                ).images
             finish = time.time()
 
         short_prompt = prompt.strip("<>:\"/\\|?*\n\t")
@@ -250,7 +274,7 @@ def generate_click(
     if current_tab == 0:
         images, status = run_diffusers(
             prompt_t0, neg_prompt_t0, None, None, iter_t0, batch_t0, steps_t0, guid_t0, height_t0, width_t0, eta_t0, 0,
-            seed_t0, fmt_t0)
+            seed_t0, fmt_t0, None)
     elif current_tab == 1:
         # input image resizing
         input_image = image_t1.convert("RGB")
@@ -286,7 +310,7 @@ def generate_click(
 
         images, status = run_diffusers(
             prompt_t1, neg_prompt_t1, input_image, None, iter_t1, batch_t1, steps_t1, guid_t1, height_t1, width_t1,
-            eta_t1, denoise_t1, seed_t1, fmt_t1)
+            eta_t1, denoise_t1, seed_t1, fmt_t1, None)
     elif current_tab == 2:
         input_image = image_t2["image"].convert("RGB")
         input_image = resize_and_crop(input_image, height_t2, width_t2)
@@ -312,7 +336,7 @@ def generate_click(
 
         images, status = run_diffusers(
             prompt_t2, neg_prompt_t2, input_image, input_mask, iter_t2, batch_t2, steps_t2, guid_t2, height_t2,
-            width_t2, eta_t2, 0, seed_t2, fmt_t2)
+            width_t2, eta_t2, 0, seed_t2, fmt_t2, legacy_t2)
 
     if release_memory:
         pipe = None
