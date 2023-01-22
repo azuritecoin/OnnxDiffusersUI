@@ -126,6 +126,12 @@ NOTE: make sure the `--dump_path` in the first script and the `--model_path` is 
 
 Once you have your newly converted model, make sure the model is saved into the `model` folder (create one if it doesn't exist). Once you restarted the UI, select the model from the dropdown menu on the top left.
 
+## Reduce VRAM use by having Text Encoder on CPU
+The Text Encoder runs only once per generation and is not very compute intensive, but the model uses VRAM resulting in reduced available VRAM.
+VRAM memory pressure will reduce the speed of every iteration. It can be beneficial to run the Text Encoder on CPU instead.  
+You can make the UI load the Text Encoder on CPU by adding `--cpu-textenc` flag:  
+`python onnxUI.py --cpu-textenc`
+
 ## Running Stable Diffusion on CPUs
 
 If you don't have a graphics card with enough VRAM or you only have onboard graphics, you can still run Stable Diffusion with the CPU. Simply add a `--cpu-only` flag to your command line:  

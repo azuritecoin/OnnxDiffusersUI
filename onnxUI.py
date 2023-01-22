@@ -8,6 +8,7 @@ from typing import Optional, Tuple
 from math import ceil
 
 from diffusers import (
+    OnnxRuntimeModel,
     OnnxStableDiffusionPipeline,
     OnnxStableDiffusionImg2ImgPipeline,
     DDIMScheduler,
@@ -260,22 +261,42 @@ def generate_click(
     # select which pipeline depending on current tab
     if current_tab == 0:
         if current_pipe != "txt2img" or pipe is None:
-            pipe = OnnxStableDiffusionPipeline.from_pretrained(
-                model_path, provider=provider, scheduler=scheduler)
+            if textenc_on_cpu:
+                cputextenc=OnnxRuntimeModel.from_pretrained(model_path+"/text_encoder")
+                pipe = OnnxStableDiffusionPipeline.from_pretrained(
+                    model_path, provider=provider, scheduler=scheduler,text_encoder=cputextenc)
+            else:
+                pipe = OnnxStableDiffusionPipeline.from_pretrained(
+                    model_path, provider=provider, scheduler=scheduler)
         current_pipe = "txt2img"
     elif current_tab == 1:
         if current_pipe != "img2img" or pipe is None:
-            pipe = OnnxStableDiffusionImg2ImgPipeline.from_pretrained(
-                model_path, provider=provider, scheduler=scheduler)
+            if textenc_on_cpu:
+                cputextenc=OnnxRuntimeModel.from_pretrained(model_path+"/text_encoder")
+                pipe = OnnxStableDiffusionImg2ImgPipeline.from_pretrained(
+                    model_path, provider=provider, scheduler=scheduler,text_encoder=cputextenc)
+            else:
+                pipe = OnnxStableDiffusionImg2ImgPipeline.from_pretrained(
+                    model_path, provider=provider, scheduler=scheduler)
         current_pipe = "img2img"
     elif current_tab == 2:
         if current_pipe != "inpaint" or pipe is None or current_legacy != legacy_t2:
             if legacy_t2:
-                pipe = OnnxStableDiffusionInpaintPipelineLegacy.from_pretrained(
-                    model_path, provider=provider, scheduler=scheduler)
+                if textenc_on_cpu:
+                    cputextenc=OnnxRuntimeModel.from_pretrained(model_path+"/text_encoder")
+                    pipe = OnnxStableDiffusionInpaintPipelineLegacy.from_pretrained(
+                        model_path, provider=provider, scheduler=scheduler,text_encoder=cputextenc)
+                else:
+                    pipe = OnnxStableDiffusionInpaintPipelineLegacy.from_pretrained(
+                        model_path, provider=provider, scheduler=scheduler)
             else:
-                pipe = OnnxStableDiffusionInpaintPipeline.from_pretrained(
-                    model_path, provider=provider, scheduler=scheduler)
+                if textenc_on_cpu:
+                    cputextenc=OnnxRuntimeModel.from_pretrained(model_path+"/text_encoder")
+                    pipe = OnnxStableDiffusionInpaintPipeline.from_pretrained(
+                        model_path, provider=provider, scheduler=scheduler,text_encoder=cputextenc)
+                else:
+                    pipe = OnnxStableDiffusionInpaintPipeline.from_pretrained(
+                        model_path, provider=provider, scheduler=scheduler)
         current_pipe = "inpaint"
         current_legacy = legacy_t2
 
@@ -393,6 +414,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="gradio interface for ONNX based Stable Diffusion")
     parser.add_argument("--cpu-only", action="store_true", default=False, help="run ONNX with CPU")
     parser.add_argument(
+        "--cpu-textenc", action="store_true",
+        help="Run Text Encoder on CPU, saves VRAM by running Text Encoder on CPU")
+    parser.add_argument(
         "--release-memory", action="store_true", default=False,
         help="de-allocate the pipeline and release memory after generation")
     args = parser.parse_args()
@@ -404,6 +428,7 @@ if __name__ == "__main__":
     current_pipe = "txt2img"
     current_legacy = False
     release_memory = args.release_memory
+    textenc_on_cpu = args.cpu_textenc
 
     # diffusers objects
     scheduler = None
