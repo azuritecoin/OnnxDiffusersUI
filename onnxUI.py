@@ -74,7 +74,7 @@ def run_diffusers(
     else:
         next_index = 0
 
-    sched_name = str(pipe.scheduler._class_name)
+    sched_name = pipe.scheduler.__class__.__name__
     neg_prompt = None if neg_prompt == "" else neg_prompt
     images = []
     time_taken = 0
