@@ -9,3 +9,4 @@ ftfy
 OmegaConf
 spacy
 numpy<1.24
+accelerate
