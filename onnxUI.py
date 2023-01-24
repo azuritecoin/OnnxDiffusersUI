@@ -58,7 +58,10 @@ def run_diffusers(
             seed = int(seed) & np.iinfo(np.uint32).max
         except ValueError:
             seed = hash(seed) & np.iinfo(np.uint32).max
-    seeds = np.array([seed], dtype=np.uint32)  # use given seed for the first iteration
+
+    # use given seed for the first iteration
+    seeds = np.array([seed], dtype=np.uint32)
+
     if iteration_count > 1:
         seed_seq = np.random.SeedSequence(seed)
         seeds = np.concatenate((seeds, seed_seq.generate_state(iteration_count - 1)))
@@ -79,11 +82,23 @@ def run_diffusers(
     images = []
     time_taken = 0
     for i in range(iteration_count):
-        print(f"iteration {i+1}/{iteration_count}")
+        print(f"iteration {i + 1}/{iteration_count}")
 
-        info = f"{next_index+i:06} | prompt: {prompt} negative prompt: {neg_prompt} | scheduler: {sched_name} " + \
-            f"model: {model_name} iteration size: {iteration_count} batch size: {batch_size} steps: {steps} " + \
-            f"scale: {guidance_scale} height: {height} width: {width} eta: {eta} seed: {seeds[i]}"
+        info = (
+            f"{next_index + i:06} | "
+            f"prompt: {prompt} "
+            f"negative prompt: {neg_prompt} | "
+            f"scheduler: {sched_name} "
+            f"model: {model_name} "
+            f"iteration size: {iteration_count} "
+            f"batch size: {batch_size} "
+            f"steps: {steps} "
+            f"scale: {guidance_scale} "
+            f"height: {height} "
+            f"width: {width} "
+            f"eta: {eta} "
+            f"seed: {seeds[i]}"
+        )
         if (current_pipe == "img2img"):
             info = info + f" denoise: {denoise_strength}"
         with open(os.path.join(output_path, "history.txt"), "a") as log:
@@ -95,14 +110,27 @@ def run_diffusers(
         if current_pipe == "txt2img":
             start = time.time()
             batch_images = pipe(
-                prompt, negative_prompt=neg_prompt, height=height, width=width, num_inference_steps=steps,
-                guidance_scale=guidance_scale, eta=eta, num_images_per_prompt=batch_size, generator=rng).images
+                prompt,
+                negative_prompt=neg_prompt,
+                height=height,
+                width=width,
+                num_inference_steps=steps,
+                guidance_scale=guidance_scale,
+                eta=eta,
+                num_images_per_prompt=batch_size,
+                generator=rng).images
             finish = time.time()
         elif current_pipe == "img2img":
             start = time.time()
             batch_images = pipe(
-                prompt, negative_prompt=neg_prompt, image=init_image, num_inference_steps=steps,
-                guidance_scale=guidance_scale, eta=eta, strength=denoise_strength, num_images_per_prompt=batch_size,
+                prompt,
+                negative_prompt=neg_prompt,
+                image=init_image,
+                num_inference_steps=steps,
+                guidance_scale=guidance_scale,
+                eta=eta,
+                strength=denoise_strength,
+                num_images_per_prompt=batch_size,
                 generator=rng).images
             finish = time.time()
         elif current_pipe == "inpaint":
@@ -168,12 +196,21 @@ def run_diffusers(
 
     time_taken = time_taken / 60.0
     if iteration_count > 1:
-        status = f"Run indexes {next_index:06} to {next_index+iteration_count-1:06} took {time_taken:.1f} minutes " + \
-            f"to generate {iteration_count} iterations with batch size of {batch_size}. seeds: " + \
-            np.array2string(seeds, separator=",")
+        status = (
+            f"Run indexes {next_index:06} "
+            f"to {next_index + iteration_count - 1:06} "
+            f"took {time_taken:.1f} minutes "
+            f"to generate {iteration_count} "
+            f"iterations with batch size of {batch_size}. "
+            f"seeds: " + np.array2string(seeds, separator=",")
+        )
     else:
-        status = f"Run index {next_index:06} took {time_taken:.1f} minutes to generate a batch size of " + \
-            f"{batch_size}. seed: {seeds[0]}"
+        status = (
+            f"Run index {next_index:06} "
+            f"took {time_taken:.1f} minutes "
+            f"to generate a batch size of {batch_size}. "
+            f"seed: {seeds[0]}"
+        )
 
     return images, status
 
@@ -199,23 +236,61 @@ def clear_click():
     global current_tab
     if current_tab == 0:
         return {
-            prompt_t0: "", neg_prompt_t0: "", sch_t0: "PNDM", iter_t0: 1, batch_t0: 1, steps_t0: 16,
-            guid_t0: 7.5, height_t0: 512, width_t0: 512, eta_t0: 0.0, seed_t0: "", fmt_t0: "png"}
+            prompt_t0: "",
+            neg_prompt_t0: "",
+            sch_t0: "PNDM",
+            iter_t0: 1,
+            batch_t0: 1,
+            steps_t0: 16,
+            guid_t0: 7.5,
+            height_t0: 512,
+            width_t0: 512,
+            eta_t0: 0.0,
+            seed_t0: "",
+            fmt_t0: "png"}
     elif current_tab == 1:
         return {
-            prompt_t1: "", neg_prompt_t1: "", sch_t1: "PNDM", image_t1: None, iter_t1: 1, batch_t1: 1, steps_t1: 16,
-            guid_t1: 7.5, height_t1: 512, width_t1: 512, eta_t1: 0.0, denoise_t1: 0.8, seed_t1: "", fmt_t1: "png"}
+            prompt_t1: "",
+            neg_prompt_t1: "",
+            sch_t1: "PNDM",
+            image_t1: None,
+            iter_t1: 1,
+            batch_t1: 1,
+            steps_t1: 16,
+            guid_t1: 7.5,
+            height_t1: 512,
+            width_t1: 512,
+            eta_t1: 0.0,
+            denoise_t1: 0.8,
+            seed_t1: "",
+            fmt_t1: "png"}
     elif current_tab == 2:
         return {
-            prompt_t2: "", neg_prompt_t2: "", sch_t2: "PNDM", legacy_t2: True, image_t2: None, iter_t2: 1, batch_t2: 1,
-            steps_t2: 16, guid_t2: 7.5, height_t2: 512, width_t2: 512, eta_t2: 0.0, seed_t2: "", fmt_t2: "png"}
+            prompt_t2: "",
+            neg_prompt_t2: "",
+            sch_t2: "PNDM",
+            legacy_t2: True,
+            image_t2: None,
+            iter_t2: 1,
+            batch_t2: 1,
+            steps_t2: 16,
+            guid_t2: 7.5,
+            height_t2: 512,
+            width_t2: 512,
+            eta_t2: 0.0,
+            seed_t2: "",
+            fmt_t2: "png"}
 
 
 def generate_click(
-    model_drop, prompt_t0, neg_prompt_t0, sch_t0, iter_t0, batch_t0, steps_t0, guid_t0, height_t0, width_t0, eta_t0,
-    seed_t0, fmt_t0, prompt_t1, neg_prompt_t1, image_t1, sch_t1, iter_t1, batch_t1, steps_t1, guid_t1, height_t1,
-    width_t1, eta_t1, denoise_t1, seed_t1, fmt_t1, prompt_t2, neg_prompt_t2, sch_t2, legacy_t2, image_t2, iter_t2,
-    batch_t2, steps_t2, guid_t2, height_t2, width_t2, eta_t2, seed_t2, fmt_t2
+    model_drop, prompt_t0, neg_prompt_t0, sch_t0, iter_t0, batch_t0,
+    steps_t0, guid_t0, height_t0, width_t0, eta_t0,
+    seed_t0, fmt_t0, prompt_t1, neg_prompt_t1, image_t1, sch_t1, iter_t1,
+    batch_t1, steps_t1, guid_t1, height_t1,
+    width_t1, eta_t1, denoise_t1, seed_t1, fmt_t1, prompt_t2,
+    neg_prompt_t2, sch_t2, legacy_t2, image_t2, iter_t2,
+    batch_t2, steps_t2, guid_t2, height_t2, width_t2, eta_t2, seed_t2,
+    fmt_t2
 ):
     global model_name
     global provider
@@ -261,42 +336,146 @@ def generate_click(
     # select which pipeline depending on current tab
     if current_tab == 0:
         if current_pipe != "txt2img" or pipe is None:
-            if textenc_on_cpu:
-                cputextenc=OnnxRuntimeModel.from_pretrained(model_path+"/text_encoder")
+            if textenc_on_cpu and vaedec_on_cpu:
+                cputextenc = OnnxRuntimeModel.from_pretrained(
+                    model_path + "/text_encoder")
+                cpuvaedec = OnnxRuntimeModel.from_pretrained(
+                    model_path + "/vae_decoder")
                 pipe = OnnxStableDiffusionPipeline.from_pretrained(
-                    model_path, provider=provider, scheduler=scheduler,text_encoder=cputextenc)
+                    model_path,
+                    provider=provider,
+                    scheduler=scheduler,
+                    text_encoder=cputextenc,
+                    vae_decoder=cpuvaedec,
+                    vae_encoder=None
+                )
+            elif textenc_on_cpu:
+                cputextenc = OnnxRuntimeModel.from_pretrained(
+                    model_path + "/text_encoder")
+                pipe = OnnxStableDiffusionPipeline.from_pretrained(
+                    model_path,
+                    provider=provider,
+                    scheduler=scheduler,
+                    text_encoder=cputextenc)
+            elif vaedec_on_cpu:
+                cpuvaedec = OnnxRuntimeModel.from_pretrained(
+                    model_path + "/vae_decoder")
+                pipe = OnnxStableDiffusionPipeline.from_pretrained(
+                    model_path,
+                    provider=provider,
+                    scheduler=scheduler,
+                    vae_decoder=cpuvaedec,
+                    vae_encoder=None
+                )
             else:
                 pipe = OnnxStableDiffusionPipeline.from_pretrained(
-                    model_path, provider=provider, scheduler=scheduler)
+                    model_path,
+                    provider=provider,
+                    scheduler=scheduler)
         current_pipe = "txt2img"
     elif current_tab == 1:
         if current_pipe != "img2img" or pipe is None:
-            if textenc_on_cpu:
-                cputextenc=OnnxRuntimeModel.from_pretrained(model_path+"/text_encoder")
+            if textenc_on_cpu and vaedec_on_cpu:
+                cputextenc = OnnxRuntimeModel.from_pretrained(
+                    model_path + "/text_encoder")
+                cpuvaedec = OnnxRuntimeModel.from_pretrained(
+                    model_path + "/vae_decoder")
                 pipe = OnnxStableDiffusionImg2ImgPipeline.from_pretrained(
-                    model_path, provider=provider, scheduler=scheduler,text_encoder=cputextenc)
+                    model_path,
+                    provider=provider,
+                    scheduler=scheduler,
+                    text_encoder=cputextenc,
+                    vae_decoder=cpuvaedec)
+            elif textenc_on_cpu:
+                cputextenc = OnnxRuntimeModel.from_pretrained(
+                    model_path + "/text_encoder")
+                pipe = OnnxStableDiffusionImg2ImgPipeline.from_pretrained(
+                    model_path,
+                    provider=provider,
+                    scheduler=scheduler,
+                    text_encoder=cputextenc)
+            elif vaedec_on_cpu:
+                cpuvaedec = OnnxRuntimeModel.from_pretrained(
+                    model_path + "/vae_decoder")
+                pipe = OnnxStableDiffusionImg2ImgPipeline.from_pretrained(
+                    model_path,
+                    provider=provider,
+                    scheduler=scheduler,
+                    vae_decoder=cpuvaedec)
             else:
                 pipe = OnnxStableDiffusionImg2ImgPipeline.from_pretrained(
-                    model_path, provider=provider, scheduler=scheduler)
+                    model_path,
+                    provider=provider,
+                    scheduler=scheduler)
         current_pipe = "img2img"
     elif current_tab == 2:
         if current_pipe != "inpaint" or pipe is None or current_legacy != legacy_t2:
             if legacy_t2:
-                if textenc_on_cpu:
-                    cputextenc=OnnxRuntimeModel.from_pretrained(model_path+"/text_encoder")
+                if textenc_on_cpu and vaedec_on_cpu:
+                    cputextenc = OnnxRuntimeModel.from_pretrained(
+                        model_path + "/text_encoder")
+                    cpuvaedec = OnnxRuntimeModel.from_pretrained(
+                        model_path + "/vae_decoder")
                     pipe = OnnxStableDiffusionInpaintPipelineLegacy.from_pretrained(
-                        model_path, provider=provider, scheduler=scheduler,text_encoder=cputextenc)
+                        model_path,
+                        provider=provider,
+                        scheduler=scheduler,
+                        text_encoder=cputextenc,
+                        vae_decoder=cpuvaedec)
+                elif textenc_on_cpu:
+                    cputextenc = OnnxRuntimeModel.from_pretrained(
+                        model_path + "/text_encoder")
+                    pipe = OnnxStableDiffusionInpaintPipelineLegacy.from_pretrained(
+                        model_path,
+                        provider=provider,
+                        scheduler=scheduler,
+                        text_encoder=cputextenc)
+                elif vaedec_on_cpu:
+                    cpuvaedec = OnnxRuntimeModel.from_pretrained(
+                        model_path + "/vae_decoder")
+                    pipe = OnnxStableDiffusionInpaintPipelineLegacy.from_pretrained(
+                        model_path,
+                        provider=provider,
+                        scheduler=scheduler,
+                        vae_decoder=cpuvaedec)
                 else:
                     pipe = OnnxStableDiffusionInpaintPipelineLegacy.from_pretrained(
-                        model_path, provider=provider, scheduler=scheduler)
+                        model_path,
+                        provider=provider,
+                        scheduler=scheduler)
             else:
-                if textenc_on_cpu:
-                    cputextenc=OnnxRuntimeModel.from_pretrained(model_path+"/text_encoder")
+                if textenc_on_cpu and vaedec_on_cpu:
+                    cputextenc = OnnxRuntimeModel.from_pretrained(
+                        model_path + "/text_encoder")
+                    cpuvaedec = OnnxRuntimeModel.from_pretrained(
+                        model_path + "/vae_decoder")
                     pipe = OnnxStableDiffusionInpaintPipeline.from_pretrained(
-                        model_path, provider=provider, scheduler=scheduler,text_encoder=cputextenc)
+                        model_path,
+                        provider=provider,
+                        scheduler=scheduler,
+                        text_encoder=cputextenc,
+                        vae_decoder=cpuvaedec)
+                elif textenc_on_cpu:
+                    cputextenc = OnnxRuntimeModel.from_pretrained(
+                        model_path + "/text_encoder")
+                    pipe = OnnxStableDiffusionInpaintPipeline.from_pretrained(
+                        model_path,
+                        provider=provider,
+                        scheduler=scheduler,
+                        text_encoder=cputextenc)
+                elif vaedec_on_cpu:
+                    cpuvaedec = OnnxRuntimeModel.from_pretrained(
+                        model_path + "/vae_decoder")
+                    pipe = OnnxStableDiffusionInpaintPipeline.from_pretrained(
+                        model_path,
+                        provider=provider,
+                        scheduler=scheduler,
+                        vae_decoder=cpuvaedec)
                 else:
                     pipe = OnnxStableDiffusionInpaintPipeline.from_pretrained(
-                        model_path, provider=provider, scheduler=scheduler)
+                        model_path,
+                        provider=provider,
+                        scheduler=scheduler)
         current_pipe = "inpaint"
         current_legacy = legacy_t2
 
@@ -316,8 +495,21 @@ def generate_click(
     # run the pipeline with the correct parameters
     if current_tab == 0:
         images, status = run_diffusers(
-            prompt_t0, neg_prompt_t0, None, None, iter_t0, batch_t0, steps_t0, guid_t0, height_t0, width_t0, eta_t0, 0,
-            seed_t0, fmt_t0, None)
+            prompt_t0,
+            neg_prompt_t0,
+            None,
+            None,
+            iter_t0,
+            batch_t0,
+            steps_t0,
+            guid_t0,
+            height_t0,
+            width_t0,
+            eta_t0,
+            0,
+            seed_t0,
+            fmt_t0,
+            None)
     elif current_tab == 1:
         # input image resizing
         input_image = image_t1.convert("RGB")
@@ -352,8 +544,21 @@ def generate_click(
             print()
 
         images, status = run_diffusers(
-            prompt_t1, neg_prompt_t1, input_image, None, iter_t1, batch_t1, steps_t1, guid_t1, height_t1, width_t1,
-            eta_t1, denoise_t1, seed_t1, fmt_t1, None)
+            prompt_t1,
+            neg_prompt_t1,
+            input_image,
+            None,
+            iter_t1,
+            batch_t1,
+            steps_t1,
+            guid_t1,
+            height_t1,
+            width_t1,
+            eta_t1,
+            denoise_t1,
+            seed_t1,
+            fmt_t1,
+            None)
     elif current_tab == 2:
         input_image = image_t2["image"].convert("RGB")
         input_image = resize_and_crop(input_image, height_t2, width_t2)
@@ -378,8 +583,21 @@ def generate_click(
             print()
 
         images, status = run_diffusers(
-            prompt_t2, neg_prompt_t2, input_image, input_mask, iter_t2, batch_t2, steps_t2, guid_t2, height_t2,
-            width_t2, eta_t2, 0, seed_t2, fmt_t2, legacy_t2)
+            prompt_t2,
+            neg_prompt_t2,
+            input_image,
+            input_mask,
+            iter_t2,
+            batch_t2,
+            steps_t2,
+            guid_t2,
+            height_t2,
+            width_t2,
+            eta_t2,
+            0,
+            seed_t2,
+            fmt_t2,
+            legacy_t2)
 
     if release_memory:
         pipe = None
@@ -417,6 +635,9 @@ if __name__ == "__main__":
         "--cpu-textenc", action="store_true",
         help="Run Text Encoder on CPU, saves VRAM by running Text Encoder on CPU")
     parser.add_argument(
+        "--cpu-vaedec", action="store_true",
+        help="Run VAE Decoder on CPU, saves VRAM by running VAE Decoder on CPU")
+    parser.add_argument(
         "--release-memory", action="store_true", default=False,
         help="de-allocate the pipeline and release memory after generation")
     args = parser.parse_args()
@@ -429,6 +650,7 @@ if __name__ == "__main__":
     current_legacy = False
     release_memory = args.release_memory
     textenc_on_cpu = args.cpu_textenc
+    vaedec_on_cpu = args.cpu_vaedec
 
     # diffusers objects
     scheduler = None
@@ -543,14 +765,48 @@ if __name__ == "__main__":
 
         # config components
         tab0_inputs = [
-            prompt_t0, neg_prompt_t0, sch_t0, iter_t0, batch_t0, steps_t0, guid_t0, height_t0, width_t0, eta_t0,
-            seed_t0, fmt_t0]
+            prompt_t0,
+            neg_prompt_t0,
+            sch_t0,
+            iter_t0,
+            batch_t0,
+            steps_t0,
+            guid_t0,
+            height_t0,
+            width_t0,
+            eta_t0,
+            seed_t0,
+            fmt_t0]
         tab1_inputs = [
-            prompt_t1, neg_prompt_t1, image_t1, sch_t1, iter_t1, batch_t1, steps_t1, guid_t1, height_t1, width_t1,
-            eta_t1, denoise_t1, seed_t1, fmt_t1]
+            prompt_t1,
+            neg_prompt_t1,
+            image_t1,
+            sch_t1,
+            iter_t1,
+            batch_t1,
+            steps_t1,
+            guid_t1,
+            height_t1,
+            width_t1,
+            eta_t1,
+            denoise_t1,
+            seed_t1,
+            fmt_t1]
         tab2_inputs = [
-            prompt_t2, neg_prompt_t2, sch_t2, legacy_t2, image_t2, iter_t2, batch_t2, steps_t2, guid_t2, height_t2,
-            width_t2, eta_t2, seed_t2, fmt_t2]
+            prompt_t2,
+            neg_prompt_t2,
+            sch_t2,
+            legacy_t2,
+            image_t2,
+            iter_t2,
+            batch_t2,
+            steps_t2,
+            guid_t2,
+            height_t2,
+            width_t2,
+            eta_t2,
+            seed_t2,
+            fmt_t2]
         all_inputs = [model_drop]
         all_inputs.extend(tab0_inputs)
         all_inputs.extend(tab1_inputs)
