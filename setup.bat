@@ -30,14 +30,13 @@ if exist %venv_path%\Scripts\activate.bat goto ActivateVirtEnv
 
 echo no %venv_path% folder detected, creating virtual environment
 set first_run=1
-python -m venv %venv_path%
+python -m venv %venv_path% --upgrade-deps
 
 :ActivateVirtEnv
 call %venv_path%\Scripts\activate.bat
 
 :: for the first run, get requirements and install packages
 if %first_run%==0 goto ScriptDownload
-python -m pip install --upgrade pip
 pip install wheel
 :: using wget from python library instead of standalone wget for Windows
 pip install wget
