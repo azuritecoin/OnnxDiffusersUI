@@ -18,11 +18,7 @@ from diffusers import (
     LMSDiscreteScheduler,
     EulerDiscreteScheduler,
     EulerAncestralDiscreteScheduler,
-    DPMSolverMultistepScheduler,
-    DPMSolverSinglestepScheduler,
-    DEISMultistepScheduler,
-    HeunDiscreteScheduler,
-    KDPM2DiscreteScheduler
+    DPMSolverMultistepScheduler
 )
 from diffusers import __version__ as _df_version
 import gradio as gr
@@ -703,6 +699,12 @@ if __name__ == "__main__":
     default_model = model_list[0] if len(model_list) > 0 else None
 
     if is_v_0_12:
+        from diffusers import (
+            DPMSolverSinglestepScheduler,
+            DEISMultistepScheduler,
+            HeunDiscreteScheduler,
+            KDPM2DiscreteScheduler
+        )
         sched_list = ["DPMS_ms", "DPMS_ss", "EulerA", "Euler", "DDIM", "LMS", "PNDM","DEIS","HEUN","KDPM2"]
     else:
         sched_list = ["DPMS_ms", "EulerA", "Euler", "DDIM", "LMS", "PNDM"]
