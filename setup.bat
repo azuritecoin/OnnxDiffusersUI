@@ -3,7 +3,6 @@
 set first_run=0
 set venv_path="virtualenv"
 set model_path="model"
-set version_tag="v0.10.0"
 
 :: check if programs are installed
 python --version 1> NUL 2> NUL
@@ -45,14 +44,16 @@ echo installing Python packages
 if not exist requirements.txt python -m wget https://raw.githubusercontent.com/azuritecoin/OnnxDiffusersUI/main/requirements.txt
 pip install -r requirements.txt
 :: install onnxruntime-directml separately after onnxruntime to enable DmlExecutionProvider
-pip install "protobuf<=3.20.1" onnxruntime-directml
-:: install latest version of protobuf v3.x NOTE: onnx package offically supports upto protobuf 3.20.1
-pip install --no-deps --ignore-installed "protobuf<4"
+pip install onnxruntime-directml
 
 :ScriptDownload
 if not exist onnxUI.py python -m wget https://raw.githubusercontent.com/azuritecoin/OnnxDiffusersUI/main/onnxUI.py
 if not exist txt2img_onnx.py python -m wget https://raw.githubusercontent.com/azuritecoin/OnnxDiffusersUI/main/txt2img_onnx.py
 if not exist lpw_pipe.py python -m wget https://raw.githubusercontent.com/azuritecoin/OnnxDiffusersUI/main/lpw_pipe.py
+
+:: get version number from pip
+for /F "delims= eol=|" %%f in ('pip show diffusers ^| findstr "Version"') do set version_tag=%%f
+set version_tag=v%version_tag:~9%
 
 if not exist convert_original_stable_diffusion_to_diffusers.py (
     python -m wget https://raw.githubusercontent.com/huggingface/diffusers/%version_tag%/scripts/convert_original_stable_diffusion_to_diffusers.py -o convert_original_stable_diffusion_to_diffusers.py
@@ -72,12 +73,14 @@ if %update%==0 goto FinishSetup
 python -m pip install --upgrade pip
 pip install -U wget wheel
 :: need to uninstall these two packages to upgrade
-pip uninstall --yes protobuf onnxruntime-directml
+pip uninstall --yes onnxruntime-directml
 if exist requirements.txt del requirements.txt
 python -m wget https://raw.githubusercontent.com/azuritecoin/OnnxDiffusersUI/main/requirements.txt
 pip install -U -r requirements.txt
-pip install -U "protobuf<=3.20.1" onnxruntime-directml
-pip install --no-deps --ignore-installed "protobuf<4"
+pip install -U onnxruntime-directml
+
+for /F "delims= eol=|" %%f in ('pip show diffusers ^| findstr "Version"') do set version_tag=%%f
+set version_tag=v%version_tag:~9%
 
 if exist onnxUI.py del onnxUI.py
 python -m wget https://raw.githubusercontent.com/azuritecoin/OnnxDiffusersUI/main/onnxUI.py
