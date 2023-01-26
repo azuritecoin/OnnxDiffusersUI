@@ -11,9 +11,14 @@ from diffusers import (
     OnnxRuntimeModel,
     OnnxStableDiffusionPipeline,
     OnnxStableDiffusionImg2ImgPipeline,
+    OnnxStableDiffusionInpaintPipeline,
+    OnnxStableDiffusionInpaintPipelineLegacy,
     DDIMScheduler,
     PNDMScheduler,
     LMSDiscreteScheduler,
+    EulerDiscreteScheduler,
+    EulerAncestralDiscreteScheduler,
+    DPMSolverMultistepScheduler
 )
 from diffusers import __version__ as _df_version
 import gradio as gr
@@ -324,14 +329,20 @@ def generate_click(
         scheduler = LMSDiscreteScheduler.from_pretrained(model_path, subfolder="scheduler")
     elif sched_name == "DDIM" and type(scheduler) is not DDIMScheduler:
         scheduler = DDIMScheduler.from_pretrained(model_path, subfolder="scheduler")
-    elif sched_name == "DDPM" and type(scheduler) is not DDPMScheduler:
-        scheduler = DDPMScheduler.from_pretrained(model_path, subfolder="scheduler")
     elif sched_name == "Euler" and type(scheduler) is not EulerDiscreteScheduler:
         scheduler = EulerDiscreteScheduler.from_pretrained(model_path, subfolder="scheduler")
     elif sched_name == "EulerA" and type(scheduler) is not EulerAncestralDiscreteScheduler:
         scheduler = EulerAncestralDiscreteScheduler.from_pretrained(model_path, subfolder="scheduler")
-    elif sched_name == "DPMS" and type(scheduler) is not DPMSolverMultistepScheduler:
+    elif sched_name == "DPMS_ms" and type(scheduler) is not DPMSolverMultistepScheduler:
         scheduler = DPMSolverMultistepScheduler.from_pretrained(model_path, subfolder="scheduler")
+    elif sched_name == "DPMS_ss" and type(scheduler) is not DPMSolverSinglestepScheduler:
+        scheduler = DPMSolverSinglestepScheduler.from_pretrained(model_path, subfolder="scheduler")
+    elif sched_name == "DEIS" and type(scheduler) is not DEISMultistepScheduler:
+        scheduler = DEISMultistepScheduler.from_pretrained(model_path, subfolder="scheduler")
+    elif sched_name == "HEUN" and type(scheduler) is not HeunDiscreteScheduler:
+        scheduler = HeunDiscreteScheduler.from_pretrained(model_path, subfolder="scheduler")
+    elif sched_name == "KDPM2" and type(scheduler) is not KDPM2DiscreteScheduler:
+        scheduler = KDPM2DiscreteScheduler.from_pretrained(model_path, subfolder="scheduler")
 
     # select which pipeline depending on current tab
     if current_tab == 0:
@@ -657,7 +668,7 @@ if __name__ == "__main__":
     pipe = None
 
     # check versions
-    is_v_0_8 = version.parse(_df_version) >= version.parse("0.8.0")
+    is_v_0_12 = version.parse(_df_version) >= version.parse("0.12.0")
     is_v_dev = version.parse(_df_version).is_prerelease
 
     # prerelease version use warning
@@ -687,18 +698,16 @@ if __name__ == "__main__":
                 model_list.append(entry.name)
     default_model = model_list[0] if len(model_list) > 0 else None
 
-    if is_v_0_8:
+    if is_v_0_12:
         from diffusers import (
-            OnnxStableDiffusionInpaintPipeline,
-            OnnxStableDiffusionInpaintPipelineLegacy,
-            DDPMScheduler,
-            EulerDiscreteScheduler,
-            EulerAncestralDiscreteScheduler,
-            DPMSolverMultistepScheduler
+            DPMSolverSinglestepScheduler,
+            DEISMultistepScheduler,
+            HeunDiscreteScheduler,
+            KDPM2DiscreteScheduler
         )
-        sched_list = ["DPMS", "EulerA", "Euler", "DDPM", "DDIM", "LMS", "PNDM"]
+        sched_list = ["DPMS_ms", "DPMS_ss", "EulerA", "Euler", "DDIM", "LMS", "PNDM","DEIS","HEUN","KDPM2"]
     else:
-        sched_list = ["DDIM", "LMS", "PNDM"]
+        sched_list = ["DPMS_ms", "EulerA", "Euler", "DDIM", "LMS", "PNDM"]
 
     # create gradio block
     title = "Stable Diffusion ONNX"
