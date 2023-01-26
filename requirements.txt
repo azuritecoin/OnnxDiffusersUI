@@ -1,8 +1,8 @@
-diffusers>=0.10.0
+diffusers>=0.12.0
 transformers
-onnxruntime
-onnx
-torch
+onnxruntime>=1.13
+onnx>=1.13
+torch>=1.13
 gradio
 scipy
 ftfy
@@ -10,3 +10,4 @@ OmegaConf
 spacy
 numpy<1.24
 accelerate
+protobuf<4
