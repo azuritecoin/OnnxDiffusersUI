@@ -621,7 +621,7 @@ def generate_click(
             fmt_t2,
             legacy_t2)
 
-    if release_memory:
+    if release_memory_after_generation:
         pipe = None
         gc.collect()
 
