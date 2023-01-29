@@ -312,6 +312,7 @@ def generate_click(
         model_name = model_drop
         scheduler = None
         pipe = None
+        gc.collect()
     model_path = os.path.join("model", model_name)
 
     # select which scheduler depending on current tab
