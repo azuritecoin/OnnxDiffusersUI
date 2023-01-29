@@ -132,6 +132,18 @@ VRAM memory pressure will reduce the speed of every iteration. It can be benefic
 You can make the UI load the Text Encoder on CPU by adding `--cpu-textenc` flag:  
 `python onnxUI.py --cpu-textenc`
 
+## De-allocate memory after each image generation
+You can de-allocate memory after each image generation in case you want to do that. Might be useful for very low VRAM.
+
+You can de-allocate memory after each generation by adding `--release-memory-after-generation` flag:
+`python onnxUI.py --release-memory-after-generation`
+
+## De-allocate memory when changing pipelines
+You can de-allocate memory when swapping pipelines (txt2img, img2img, inpaint). With low VRAM sometimes you may want to do this to prevent slowdowns or OOM errors that may occur from having multiple loaded at once. With more than 8GB of VRAM this is possibly not needed.
+
+You can de-allocate memory when swapping pipelines by adding `--release-memory-on-change` flag:
+`python onnxUI.py --release-memory-on-change`
+
 ## Running Stable Diffusion on CPUs
 
 If you don't have a graphics card with enough VRAM or you only have onboard graphics, you can still run Stable Diffusion with the CPU. Simply add a `--cpu-only` flag to your command line:  
