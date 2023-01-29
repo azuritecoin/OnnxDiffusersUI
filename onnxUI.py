@@ -653,16 +653,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="gradio interface for ONNX based Stable Diffusion")
     parser.add_argument("--cpu-only", action="store_true", default=False, help="run ONNX with CPU")
     parser.add_argument(
-        "--cpu-textenc", action="store_true",
+        "--cpu-textenc", action="store_true", default=False,
         help="Run Text Encoder on CPU, saves VRAM by running Text Encoder on CPU")
     parser.add_argument(
-        "--cpu-vaedec", action="store_true",
+        "--cpu-vaedec", action="store_true", default=False,
         help="Run VAE Decoder on CPU, saves VRAM by running VAE Decoder on CPU")
     parser.add_argument(
         "--release-memory-after-generation", action="store_true", default=False,
         help="de-allocate the pipeline and release memory after generation")
     parser.add_argument(
-        "--release-memory-on-change", action="store_true", default=True,
+        "--release-memory-on-change", action="store_true", default=False,
         help="de-allocate the pipeline and release memory allocated when changing pipelines",
     )
     args = parser.parse_args()
