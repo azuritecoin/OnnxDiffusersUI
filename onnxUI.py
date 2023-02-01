@@ -540,7 +540,7 @@ def generate_click(
         # adjust steps to account for denoise.
         steps_t1_old = steps_t1
         steps_t1 = ceil(steps_t1 / denoise_t1)
-        if steps_t1 > 1000 and sch_t1 == "DPMS":
+        if steps_t1 > 1000 and (sch_t1 == "DPMS_ms" or "DPMS_ss" or "DEIS"):
             steps_t1_unreduced = steps_t1
             steps_t1 = 1000
             print()
@@ -552,7 +552,7 @@ def generate_click(
             )
             print()
             print(
-                f"INTERNAL STEP COUNT EXCEEDS 1000 MAX FOR DPMS. INTERNAL STEPS WILL BE REDUCED TO 1000."
+                f"INTERNAL STEP COUNT EXCEEDS 1000 MAX FOR DPMS_ms, DPMS_ss, or DEIS. INTERNAL STEPS WILL BE REDUCED TO 1000."
             )
             print()
         else:
