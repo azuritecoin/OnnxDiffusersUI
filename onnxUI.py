@@ -45,7 +45,8 @@ def run_diffusers(
     denoise_strength: Optional[float],
     seed: str,
     image_format: str,
-    legacy: bool
+    legacy: bool,
+    loopback: bool,
 ) -> Tuple[list, str]:
     global model_name
     global current_pipe
@@ -127,16 +128,48 @@ def run_diffusers(
             finish = time.time()
         elif current_pipe == "img2img":
             start = time.time()
-            batch_images = pipe(
-                prompt,
-                negative_prompt=neg_prompt,
-                image=init_image,
-                num_inference_steps=steps,
-                guidance_scale=guidance_scale,
-                eta=eta,
-                strength=denoise_strength,
-                num_images_per_prompt=batch_size,
-                generator=rng).images
+            if loopback is True:
+                try:
+                    loopback_image
+                except UnboundLocalError:
+                    loopback_image = None
+
+                if loopback_image is not None:
+                    batch_images = pipe(
+                        prompt,
+                        negative_prompt=neg_prompt,
+                        image=loopback_image,
+                        num_inference_steps=steps,
+                        guidance_scale=guidance_scale,
+                        eta=eta,
+                        strength=denoise_strength,
+                        num_images_per_prompt=batch_size,
+                        generator=rng,
+                    ).images
+                elif loopback_image is None:
+                    batch_images = pipe(
+                        prompt,
+                        negative_prompt=neg_prompt,
+                        image=init_image,
+                        num_inference_steps=steps,
+                        guidance_scale=guidance_scale,
+                        eta=eta,
+                        strength=denoise_strength,
+                        num_images_per_prompt=batch_size,
+                        generator=rng,
+                    ).images
+            elif loopback is False:
+                batch_images = pipe(
+                    prompt,
+                    negative_prompt=neg_prompt,
+                    image=init_image,
+                    num_inference_steps=steps,
+                    guidance_scale=guidance_scale,
+                    eta=eta,
+                    strength=denoise_strength,
+                    num_images_per_prompt=batch_size,
+                    generator=rng,
+                ).images
             finish = time.time()
         elif current_pipe == "inpaint":
             start = time.time()
@@ -171,30 +204,55 @@ def run_diffusers(
         short_prompt = prompt.strip("<>:\"/\\|?*\n\t")
         short_prompt = re.sub(r'[\\/*?:"<>|\n\t]', "", short_prompt)
         short_prompt = short_prompt[:99] if len(short_prompt) > 100 else short_prompt
-        
-        # png output
-        if image_format == "png":
-            for j in range(batch_size):
-                batch_images[j].save(
+
+        if loopback is True:
+            loopback_image = batch_images[0]
+
+            # png output
+            if image_format == "png":
+                loopback_image.save(
                     os.path.join(
                         output_path,
-                        f"{next_index + i:06}-{j:02}.{short_prompt}.{image_format}",
+                        f"{next_index + i:06}-00.{short_prompt}.{image_format}",
                     ),
                     optimize=True,
                 )
-        # jpg output
-        elif image_format == "jpg":
-            for j in range(batch_size):
-                batch_images[j].save(
+            # jpg output
+            elif image_format == "jpg":
+                loopback_image.save(
                     os.path.join(
                         output_path,
-                        f"{next_index + i:06}-{j:02}.{short_prompt}.{image_format}",
+                        f"{next_index + i:06}-00.{short_prompt}.{image_format}",
                     ),
                     quality=95,
                     subsampling=0,
                     optimize=True,
                     progressive=True,
                 )
+        elif loopback is False:
+            # png output
+            if image_format == "png":
+                for j in range(batch_size):
+                    batch_images[j].save(
+                        os.path.join(
+                            output_path,
+                            f"{next_index + i:06}-{j:02}.{short_prompt}.{image_format}",
+                        ),
+                        optimize=True,
+                    )
+            # jpg output
+            elif image_format == "jpg":
+                for j in range(batch_size):
+                    batch_images[j].save(
+                        os.path.join(
+                            output_path,
+                            f"{next_index + i:06}-{j:02}.{short_prompt}.{image_format}",
+                        ),
+                        quality=95,
+                        subsampling=0,
+                        optimize=True,
+                        progressive=True,
+                    )
 
         images.extend(batch_images)
         time_taken = time_taken + (finish - start)
@@ -252,7 +310,8 @@ def clear_click():
             width_t0: 512,
             eta_t0: 0.0,
             seed_t0: "",
-            fmt_t0: "png"}
+            fmt_t0: "png",
+        }
     elif current_tab == 1:
         return {
             prompt_t1: "",
@@ -268,13 +327,15 @@ def clear_click():
             eta_t1: 0.0,
             denoise_t1: 0.8,
             seed_t1: "",
-            fmt_t1: "png"}
+            fmt_t1: "png",
+            loopback_t1: False,
+        }
     elif current_tab == 2:
         return {
             prompt_t2: "",
             neg_prompt_t2: "",
             sch_t2: "PNDM",
-            legacy_t2: True,
+            legacy_t2: False,
             image_t2: None,
             iter_t2: 1,
             batch_t2: 1,
@@ -284,18 +345,53 @@ def clear_click():
             width_t2: 512,
             eta_t2: 0.0,
             seed_t2: "",
-            fmt_t2: "png"}
+            fmt_t2: "png",
+        }
 
 
 def generate_click(
-    model_drop, prompt_t0, neg_prompt_t0, sch_t0, iter_t0, batch_t0,
-    steps_t0, guid_t0, height_t0, width_t0, eta_t0,
-    seed_t0, fmt_t0, prompt_t1, neg_prompt_t1, image_t1, sch_t1, iter_t1,
-    batch_t1, steps_t1, guid_t1, height_t1,
-    width_t1, eta_t1, denoise_t1, seed_t1, fmt_t1, prompt_t2,
-    neg_prompt_t2, sch_t2, legacy_t2, image_t2, iter_t2,
-    batch_t2, steps_t2, guid_t2, height_t2, width_t2, eta_t2, seed_t2,
-    fmt_t2
+    model_drop,
+    prompt_t0,
+    neg_prompt_t0,
+    sch_t0,
+    iter_t0,
+    batch_t0,
+    steps_t0,
+    guid_t0,
+    height_t0,
+    width_t0,
+    eta_t0,
+    seed_t0,
+    fmt_t0,
+    prompt_t1,
+    neg_prompt_t1,
+    image_t1,
+    sch_t1,
+    iter_t1,
+    batch_t1,
+    steps_t1,
+    guid_t1,
+    height_t1,
+    width_t1,
+    eta_t1,
+    denoise_t1,
+    seed_t1,
+    fmt_t1,
+    loopback_t1,
+    prompt_t2,
+    neg_prompt_t2,
+    sch_t2,
+    legacy_t2,
+    image_t2,
+    iter_t2,
+    batch_t2,
+    steps_t2,
+    guid_t2,
+    height_t2,
+    width_t2,
+    eta_t2,
+    seed_t2,
+    fmt_t2,
 ):
     global model_name
     global provider
@@ -531,7 +627,9 @@ def generate_click(
             0,
             seed_t0,
             fmt_t0,
-            None)
+            None,
+            False,
+        )
     elif current_tab == 1:
         # input image resizing
         input_image = image_t1.convert("RGB")
@@ -580,7 +678,9 @@ def generate_click(
             denoise_t1,
             seed_t1,
             fmt_t1,
-            None)
+            None,
+            loopback_t1,
+        )
     elif current_tab == 2:
         input_image = image_t2["image"].convert("RGB")
         input_image = resize_and_crop(input_image, height_t2, width_t2)
@@ -619,7 +719,9 @@ def generate_click(
             0,
             seed_t2,
             fmt_t2,
-            legacy_t2)
+            legacy_t2,
+            False,
+        )
 
     if release_memory_after_generation:
         pipe = None
@@ -721,7 +823,7 @@ if __name__ == "__main__":
             HeunDiscreteScheduler,
             KDPM2DiscreteScheduler
         )
-        sched_list = ["DPMS_ms", "DPMS_ss", "EulerA", "Euler", "DDIM", "LMS", "PNDM","DEIS","HEUN","KDPM2"]
+        sched_list = ["DPMS_ms", "DPMS_ss", "EulerA", "Euler", "DDIM", "LMS", "PNDM", "DEIS", "HEUN", "KDPM2"]
     else:
         sched_list = ["DPMS_ms", "EulerA", "Euler", "DDIM", "LMS", "PNDM"]
 
@@ -759,6 +861,8 @@ if __name__ == "__main__":
                     with gr.Row():
                         iter_t1 = gr.Slider(1, 24, value=1, step=1, label="iteration count")
                         batch_t1 = gr.Slider(1, 4, value=1, step=1, label="batch size")
+                    with gr.Row():
+                        loopback_t1 = gr.Checkbox(value=False, label="loopback (use iteration count)")
                     steps_t1 = gr.Slider(1, 300, value=16, step=1, label="steps")
                     guid_t1 = gr.Slider(0, 50, value=7.5, step=0.1, label="guidance")
                     height_t1 = gr.Slider(384, 960, value=512, step=64, label="height")
@@ -801,7 +905,8 @@ if __name__ == "__main__":
             width_t0,
             eta_t0,
             seed_t0,
-            fmt_t0]
+            fmt_t0,
+        ]
         tab1_inputs = [
             prompt_t1,
             neg_prompt_t1,
@@ -816,7 +921,9 @@ if __name__ == "__main__":
             eta_t1,
             denoise_t1,
             seed_t1,
-            fmt_t1]
+            fmt_t1,
+            loopback_t1,
+        ]
         tab2_inputs = [
             prompt_t2,
             neg_prompt_t2,
@@ -831,7 +938,8 @@ if __name__ == "__main__":
             width_t2,
             eta_t2,
             seed_t2,
-            fmt_t2]
+            fmt_t2,
+        ]
         all_inputs = [model_drop]
         all_inputs.extend(tab0_inputs)
         all_inputs.extend(tab1_inputs)
