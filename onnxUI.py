@@ -28,6 +28,8 @@ import PIL
 
 import lpw_pipe
 
+# We want to save data to PNG
+from PIL import Image, PngImagePlugin
 
 # gradio function
 def run_diffusers(
@@ -105,8 +107,21 @@ def run_diffusers(
             f"eta: {eta} "
             f"seed: {seeds[i]}"
         )
+        info_png = (
+            f"prompt: {prompt} ||"
+            f"negative prompt: {neg_prompt} || "
+            f"scheduler: {sched_name} ||"
+            f"model: {model_name} ||"
+            f"iteration size: {iteration_count} ||"
+            f"batch size: {batch_size} ||"
+            f"steps: {steps} ||"
+            f"scale: {guidance_scale} ||"
+            f"eta: {eta} ||"
+            f"seed: {seeds[i]}"
+        )
         if (current_pipe == "img2img"):
             info = info + f" denoise: {denoise_strength}"
+            info_png = info_png + f" denoise: {denoise_strength}"
         with open(os.path.join(output_path, "history.txt"), "a") as log:
             log.write(info + "\n")
 
@@ -204,7 +219,8 @@ def run_diffusers(
         short_prompt = prompt.strip("<>:\"/\\|?*\n\t")
         short_prompt = re.sub(r'[\\/*?:"<>|\n\t]', "", short_prompt)
         short_prompt = short_prompt[:99] if len(short_prompt) > 100 else short_prompt
-
+        metadata = PngImagePlugin.PngInfo()
+        metadata.add_text("Prompt",info_png)
         if loopback is True:
             loopback_image = batch_images[0]
 
@@ -216,6 +232,7 @@ def run_diffusers(
                         f"{next_index + i:06}-00.{short_prompt}.{image_format}",
                     ),
                     optimize=True,
+                    pnginfo = metadata,
                 )
             # jpg output
             elif image_format == "jpg":
@@ -239,6 +256,7 @@ def run_diffusers(
                             f"{next_index + i:06}-{j:02}.{short_prompt}.{image_format}",
                         ),
                         optimize=True,
+                        pnginfo = metadata,
                     )
             # jpg output
             elif image_format == "jpg":
