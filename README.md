@@ -161,5 +161,5 @@ NOTE: if you're updating from diffusers v0.5.1 and below, you will need to re-co
 ## Inpainting Fix
 - If inpainting does not work for you, please follow these steps from de_inferno#6407 on discord to fix it.
     - Within: `virtualenv\lib\site-packages\diffusers\pipelines\stable_diffusion\pipeline_onnx_stable_diffusion_inpaint_legacy.py`
-    - Find (likely on line 402): `sample=latent_model_input, timestep=np.array([t]), encoder_hidden_states=text_embeddings`
-    - Replace with: `sample=latent_model_input, timestep=np.array([t], dtype="float32"), encoder_hidden_states=text_embeddings`
+    - Find (likely on line 402): `sample=latent_model_input, timestep=np.array([t]), encoder_hidden_states=prompt_embeds`
+    - Replace with: `sample=latent_model_input, timestep=np.array([t], dtype="float32"), encoder_hidden_states=prompt_embeds`
