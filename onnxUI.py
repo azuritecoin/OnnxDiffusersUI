@@ -108,16 +108,16 @@ def run_diffusers(
             f"seed: {seeds[i]}"
         )
         info_png = (
-            f"prompt: {prompt} ||"
-            f"negative prompt: {neg_prompt} || "
-            f"scheduler: {sched_name} ||"
-            f"model: {model_name} ||"
-            f"iteration size: {iteration_count} ||"
-            f"batch size: {batch_size} ||"
-            f"steps: {steps} ||"
-            f"scale: {guidance_scale} ||"
-            f"eta: {eta} ||"
-            f"seed: {seeds[i]}"
+            f"{prompt} "
+            f"Negative prompt: {neg_prompt} "
+            f"Steps: {steps}, "
+            f"Sampler: {sched_name}, "
+            f"CFG scale: {guidance_scale}, "
+            f"Seed: {seeds[i]}, "
+            f"Model: {model_name}, "
+            f"Iteration size: {iteration_count}, "
+            f"batch size: {batch_size}, "
+            f"eta: {eta}, "
         )
         if (current_pipe == "img2img"):
             info = info + f" denoise: {denoise_strength}"
@@ -220,7 +220,7 @@ def run_diffusers(
         short_prompt = re.sub(r'[\\/*?:"<>|\n\t]', "", short_prompt)
         short_prompt = short_prompt[:99] if len(short_prompt) > 100 else short_prompt
         metadata = PngImagePlugin.PngInfo()
-        metadata.add_text("Prompt",info_png)
+        metadata.add_text("parameters",info_png)
         if loopback is True:
             loopback_image = batch_images[0]
 
@@ -866,8 +866,8 @@ if __name__ == "__main__":
                         batch_t0 = gr.Slider(1, 4, value=1, step=1, label="batch size")
                     steps_t0 = gr.Slider(1, 300, value=16, step=1, label="steps")
                     guid_t0 = gr.Slider(0, 50, value=7.5, step=0.1, label="guidance")
-                    height_t0 = gr.Slider(384, 960, value=512, step=64, label="height")
-                    width_t0 = gr.Slider(384, 960, value=512, step=64, label="width")
+                    height_t0 = gr.Slider(384, 1024, value=512, step=64, label="height")
+                    width_t0 = gr.Slider(384, 1024, value=512, step=64, label="width")
                     eta_t0 = gr.Slider(0, 1, value=0.0, step=0.01, label="DDIM eta", interactive=False)
                     seed_t0 = gr.Textbox(value="", max_lines=1, label="seed")
                     fmt_t0 = gr.Radio(["png", "jpg"], value="png", label="image format")
@@ -883,8 +883,8 @@ if __name__ == "__main__":
                         loopback_t1 = gr.Checkbox(value=False, label="loopback (use iteration count)")
                     steps_t1 = gr.Slider(1, 300, value=16, step=1, label="steps")
                     guid_t1 = gr.Slider(0, 50, value=7.5, step=0.1, label="guidance")
-                    height_t1 = gr.Slider(384, 960, value=512, step=64, label="height")
-                    width_t1 = gr.Slider(384, 960, value=512, step=64, label="width")
+                    height_t1 = gr.Slider(384, 1024, value=512, step=64, label="height")
+                    width_t1 = gr.Slider(384, 1024, value=512, step=64, label="width")
                     eta_t1 = gr.Slider(0, 1, value=0.0, step=0.01, label="DDIM eta", interactive=False)
                     denoise_t1 = gr.Slider(0, 1, value=0.8, step=0.01, label="denoise strength")
                     seed_t1 = gr.Textbox(value="", max_lines=1, label="seed")
@@ -901,8 +901,8 @@ if __name__ == "__main__":
                         batch_t2 = gr.Slider(1, 4, value=1, step=1, label="batch size")
                     steps_t2 = gr.Slider(1, 300, value=16, step=1, label="steps")
                     guid_t2 = gr.Slider(0, 50, value=7.5, step=0.1, label="guidance")
-                    height_t2 = gr.Slider(384, 960, value=512, step=64, label="height")
-                    width_t2 = gr.Slider(384, 960, value=512, step=64, label="width")
+                    height_t2 = gr.Slider(384, 1024, value=512, step=64, label="height")
+                    width_t2 = gr.Slider(384, 1024, value=512, step=64, label="width")
                     eta_t2 = gr.Slider(0, 1, value=0.0, step=0.01, label="DDIM eta", interactive=False)
                     seed_t2 = gr.Textbox(value="", max_lines=1, label="seed")
                     fmt_t2 = gr.Radio(["png", "jpg"], value="png", label="image format")
