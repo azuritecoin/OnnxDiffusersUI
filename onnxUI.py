@@ -6,6 +6,9 @@ import re
 import time
 from typing import Optional, Tuple
 from math import ceil
+import tempfile
+import signal
+import shutil
 
 from diffusers import (
     OnnxRuntimeModel,
@@ -770,6 +773,12 @@ def choose_sch(sched_name: str):
         return gr.update(interactive=False)
 
 
+def clear_temp_files(sig, frame):
+    print(f"Cleaning temporary files...", flush=True)
+    shutil.rmtree(tempfile.gettempdir(), ignore_errors=True, onerror=None)
+    exit(1)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="gradio interface for ONNX based Stable Diffusion")
     parser.add_argument("--cpu-only", action="store_true", default=False, help="run ONNX with CPU")
@@ -978,6 +987,11 @@ if __name__ == "__main__":
         image_t1.style(height=402)
         image_t2.style(height=402)
 
+    # change the default temp folder and handle cleaning it when stopping the ui
+    os.makedirs("temp", exist_ok=True)
+    tempfile.tempdir = os.path.abspath(os.path.join("temp"))
+    signal.signal(signal.SIGINT, clear_temp_files)
+    
     # start gradio web interface on local host
     demo.launch()
 
