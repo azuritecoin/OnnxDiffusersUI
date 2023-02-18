@@ -666,6 +666,7 @@ def generate_click(
             0,
             seed_t0,
             fmt_t0,
+            False,
             None,
             False,
         )
@@ -717,6 +718,7 @@ def generate_click(
             denoise_t1,
             seed_t1,
             fmt_t1,
+            False,
             None,
             loopback_t1,
         )
