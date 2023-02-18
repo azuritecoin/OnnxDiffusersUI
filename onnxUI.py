@@ -51,6 +51,7 @@ def run_diffusers(
     seed: str,
     image_format: str,
     legacy: bool,
+    savemask: bool,
     loopback: bool,
 ) -> Tuple[list, str]:
     global model_name
@@ -224,6 +225,19 @@ def run_diffusers(
         short_prompt = short_prompt[:99] if len(short_prompt) > 100 else short_prompt
         metadata = PngImagePlugin.PngInfo()
         metadata.add_text("parameters",info_png)
+        
+        # save mask
+        if savemask is True and current_pipe == "inpaint":
+            saved_mask = PIL.ImageOps.invert(init_mask)
+            saved_mask.save(
+                os.path.join(
+                    output_path + f"/masks/",
+                    f"{next_index + i:06}-00.{short_prompt} mask.{image_format}",
+                ),
+                optimize=True,
+                pnginfo = metadata,
+            )
+        
         if loopback is True:
             loopback_image = batch_images[0]
 
@@ -357,7 +371,9 @@ def clear_click():
             neg_prompt_t2: "",
             sch_t2: "PNDM",
             legacy_t2: False,
+            savemask_t2: False,
             image_t2: None,
+            mask_t2: None,
             iter_t2: 1,
             batch_t2: 1,
             steps_t2: 16,
@@ -403,7 +419,9 @@ def generate_click(
     neg_prompt_t2,
     sch_t2,
     legacy_t2,
+    savemask_t2,
     image_t2,
+    mask_t2,
     iter_t2,
     batch_t2,
     steps_t2,
@@ -706,8 +724,14 @@ def generate_click(
         input_image = image_t2["image"].convert("RGB")
         input_image = resize_and_crop(input_image, height_t2, width_t2)
 
-        input_mask = image_t2["mask"].convert("RGB")
-        input_mask = resize_and_crop(input_mask, height_t2, width_t2)
+        if mask_t2 is not None:
+            print("using uploaded mask")
+            input_mask = mask_t2.convert("RGB")
+            input_mask = resize_and_crop(input_mask, height_t2, width_t2)
+        else:
+            print("using painted mask")
+            input_mask = image_t2["mask"].convert("RGB")
+            input_mask = resize_and_crop(input_mask, height_t2, width_t2)
         
         # adjust steps to account for legacy inpaint only using ~80% of set steps.
         if legacy_t2 is True:
@@ -741,6 +765,7 @@ def generate_click(
             seed_t2,
             fmt_t2,
             legacy_t2,
+            savemask_t2,
             False,
         )
 
@@ -903,8 +928,18 @@ if __name__ == "__main__":
                     neg_prompt_t2 = gr.Textbox(value="", lines=2, label="negative prompt")
                     sch_t2 = gr.Radio(sched_list, value="PNDM", label="scheduler")
                     legacy_t2 = gr.Checkbox(value=False, label="legacy inpaint")
+                    savemask_t2 = gr.Checkbox(
+                        value=False, label="save painted mask"
+                    )
                     image_t2 = gr.Image(
                         source="upload", tool="sketch", label="input image", type="pil", elem_id="image_inpaint")
+                    mask_t2 = gr.Image(
+                        source="upload",
+                        label="input mask",
+                        type="pil",
+                        invert_colors=True,
+                        elem_id="mask_inpaint",
+                    )
                     with gr.Row():
                         iter_t2 = gr.Slider(1, 24, value=1, step=1, label="iteration count")
                         batch_t2 = gr.Slider(1, 4, value=1, step=1, label="batch size")
@@ -956,7 +991,9 @@ if __name__ == "__main__":
             neg_prompt_t2,
             sch_t2,
             legacy_t2,
+            savemask_t2,
             image_t2,
+            mask_t2,
             iter_t2,
             batch_t2,
             steps_t2,
