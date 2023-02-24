@@ -317,13 +317,15 @@ def resize_and_crop(input_image: PIL.Image.Image, height: int, width: int):
     input_width, input_height = input_image.size
     if height / width > input_height / input_width:
         adjust_width = int(input_width * height / input_height)
-        input_image = input_image.resize((adjust_width, height))
+        input_image = input_image.resize((adjust_width, height),
+                                         resample=Image.NEAREST)
         left = (adjust_width - width) // 2
         right = left + width
         input_image = input_image.crop((left, 0, right, height))
     else:
         adjust_height = int(input_height * width / input_width)
-        input_image = input_image.resize((width, adjust_height))
+        input_image = input_image.resize((width, adjust_height),
+                                         resample=Image.NEAREST)
         top = (adjust_height - height) // 2
         bottom = top + height
         input_image = input_image.crop((0, top, width, bottom))
