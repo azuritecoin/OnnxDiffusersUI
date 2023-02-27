@@ -57,6 +57,7 @@ def run_diffusers(
     global model_name
     global current_pipe
     global pipe
+    global original_steps
 
     prompt.strip("\n")
     neg_prompt.strip("\n")
@@ -95,39 +96,6 @@ def run_diffusers(
     time_taken = 0
     for i in range(iteration_count):
         print(f"iteration {i + 1}/{iteration_count}")
-
-        info = (
-            f"{next_index + i:06} | "
-            f"prompt: {prompt} "
-            f"negative prompt: {neg_prompt} | "
-            f"scheduler: {sched_name} "
-            f"model: {model_name} "
-            f"iteration size: {iteration_count} "
-            f"batch size: {batch_size} "
-            f"steps: {steps} "
-            f"scale: {guidance_scale} "
-            f"height: {height} "
-            f"width: {width} "
-            f"eta: {eta} "
-            f"seed: {seeds[i]}"
-        )
-        info_png = (
-            f"{prompt} "
-            f"Negative prompt: {neg_prompt} "
-            f"Steps: {steps}, "
-            f"Sampler: {sched_name}, "
-            f"CFG scale: {guidance_scale}, "
-            f"Seed: {seeds[i]}, "
-            f"Model: {model_name}, "
-            f"Iteration size: {iteration_count}, "
-            f"batch size: {batch_size}, "
-            f"eta: {eta}, "
-        )
-        if (current_pipe == "img2img"):
-            info = info + f" denoise: {denoise_strength}"
-            info_png = info_png + f" denoise: {denoise_strength}"
-        with open(os.path.join(output_path, "history.txt"), "a") as log:
-            log.write(info + "\n")
 
         # create generator object from seed
         rng = np.random.RandomState(seeds[i])
@@ -220,12 +188,48 @@ def run_diffusers(
                 ).images
             finish = time.time()
 
+        if current_pipe == "img2img" or "inpaint":
+            steps = original_steps
+
+        info = (
+            f"{next_index + i:06} | "
+            f"prompt: {prompt} "
+            f"negative prompt: {neg_prompt} | "
+            f"scheduler: {sched_name} "
+            f"model: {model_name} "
+            f"iteration size: {iteration_count} "
+            f"batch size: {batch_size} "
+            f"steps: {steps} "
+            f"scale: {guidance_scale} "
+            f"height: {height} "
+            f"width: {width} "
+            f"eta: {eta} "
+            f"seed: {seeds[i]}"
+        )
+        info_png = (
+            f"{prompt} "
+            f"Negative prompt: {neg_prompt} "
+            f"Steps: {steps}, "
+            f"Sampler: {sched_name}, "
+            f"CFG scale: {guidance_scale}, "
+            f"Seed: {seeds[i]}, "
+            f"Model: {model_name}, "
+            f"Iteration size: {iteration_count}, "
+            f"batch size: {batch_size}, "
+            f"eta: {eta}, "
+        )
+        if current_pipe == "img2img":
+            info = info + f" denoise: {denoise_strength}"
+            info_png = info_png + f" denoise: {denoise_strength}"
+        with open(os.path.join(output_path, "history.txt"), "a") as log:
+            log.write(info + "\n")
+
         short_prompt = prompt.strip("<>:\"/\\|?*\n\t")
         short_prompt = re.sub(r'[\\/*?:"<>|\n\t]', "", short_prompt)
         short_prompt = short_prompt[:99] if len(short_prompt) > 100 else short_prompt
         metadata = PngImagePlugin.PngInfo()
         metadata.add_text("parameters",info_png)
-        
+
         # save mask
         if savemask is True and current_pipe == "inpaint":
             saved_mask = PIL.ImageOps.invert(init_mask)
@@ -235,9 +239,9 @@ def run_diffusers(
                     f"{next_index + i:06}-00.{short_prompt} mask.{image_format}",
                 ),
                 optimize=True,
-                pnginfo = metadata,
+                pnginfo=metadata,
             )
-        
+
         if loopback is True:
             loopback_image = batch_images[0]
 
@@ -249,7 +253,7 @@ def run_diffusers(
                         f"{next_index + i:06}-00.{short_prompt}.{image_format}",
                     ),
                     optimize=True,
-                    pnginfo = metadata,
+                    pnginfo=metadata,
                 )
             # jpg output
             elif image_format == "jpg":
@@ -273,7 +277,7 @@ def run_diffusers(
                             f"{next_index + i:06}-{j:02}.{short_prompt}.{image_format}",
                         ),
                         optimize=True,
-                        pnginfo = metadata,
+                        pnginfo=metadata,
                     )
             # jpg output
             elif image_format == "jpg":
@@ -496,6 +500,7 @@ def generate_click(
     global release_memory_on_change
     global scheduler
     global pipe
+    global original_steps
 
     # reset scheduler and pipeline if model is different
     if model_name != model_drop:
@@ -722,7 +727,7 @@ def generate_click(
             seed_t0,
             fmt_t0,
             False,
-            None,
+            False,
             False,
         )
     elif current_tab == 1:
@@ -731,6 +736,7 @@ def generate_click(
         input_image = resize_and_crop(input_image, height_t1, width_t1)
 
         # adjust steps to account for denoise
+        original_steps = steps_t1
         steps_t1 = step_adjustment(steps_t1, denoise_t1, "img2img")
 
         images, status = run_diffusers(
@@ -749,7 +755,7 @@ def generate_click(
             seed_t1,
             fmt_t1,
             False,
-            None,
+            False,
             loopback_t1,
         )
     elif current_tab == 2:
@@ -767,6 +773,7 @@ def generate_click(
 
         # adjust steps to account for legacy inpaint only using ~80% of set steps
         if legacy_t2 is True:
+            original_steps = steps_t2
             steps_t2 = step_adjustment(steps_t2, 0, "inpaint")
 
         images, status = run_diffusers(
@@ -1048,7 +1055,7 @@ if __name__ == "__main__":
     os.makedirs("temp", exist_ok=True)
     tempfile.tempdir = os.path.abspath(os.path.join("temp"))
     signal.signal(signal.SIGINT, clear_temp_files)
-    
+
     # start gradio web interface on local host
     demo.launch()
 
