@@ -711,6 +711,8 @@ def generate_click(
 
     # run the pipeline with the correct parameters
     if current_tab == 0:
+        original_steps = steps_t0
+        
         images, status = run_diffusers(
             prompt_t0,
             neg_prompt_t0,
