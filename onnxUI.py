@@ -773,6 +773,8 @@ def generate_click(
     elif current_tab == 2:
         input_image = image_t2["image"].convert("RGB")
         input_image = resize_and_crop(input_image, height_t2, width_t2)
+        
+        original_steps = steps_t2
 
         if mask_t2 is not None:
             print("using uploaded mask")
@@ -785,7 +787,6 @@ def generate_click(
 
         # adjust steps to account for legacy inpaint only using ~80% of set steps
         if legacy_t2 is True:
-            original_steps = steps_t2
             steps_t2 = step_adjustment(steps_t2, 0, "inpaint")
 
         images, status = run_diffusers(
