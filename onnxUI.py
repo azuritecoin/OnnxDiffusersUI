@@ -4,6 +4,7 @@ import gc
 import os
 import re
 import time
+import cv2
 from typing import Optional, Tuple
 from math import ceil
 import tempfile
@@ -28,6 +29,7 @@ import gradio as gr
 import numpy as np
 from packaging import version
 import PIL
+from huggingface_hub import hf_hub_download
 
 import lpw_pipe
 
@@ -53,11 +55,15 @@ def run_diffusers(
     legacy: bool,
     savemask: bool,
     loopback: bool,
+    preprocess: bool,
 ) -> Tuple[list, str]:
     global model_name
+    global controlnet_name
+    global controlnet
     global current_pipe
     global pipe
     global original_steps
+    conditioning_scale_t3 = denoise_strength
 
     prompt.strip("\n")
     neg_prompt.strip("\n")
@@ -187,6 +193,52 @@ def run_diffusers(
                     generator=rng,
                 ).images
             finish = time.time()
+        elif current_pipe == "controlnet":
+            if preprocess:
+                cnet_image=init_image
+            else:
+                if controlnet_type == "canny":
+                    image = np.array(init_image)
+                    low_threshold = 100
+                    high_threshold = 200
+
+                    image = cv2.Canny(image, low_threshold, high_threshold)
+                    image = image[:, :, None]
+                    image = np.concatenate([image, image, image], axis=2)
+                    cnet_image = PIL.Image.fromarray(image)
+                elif controlnet_type == "openpose":
+                    openpose = OpenposeDetector.from_pretrained('lllyasviel/ControlNet')
+                    cnet_image = openpose(init_image)
+                    del openpose
+                    gc.collect() 
+                elif controlnet_type == "scribble":
+                    hed = HEDdetector.from_pretrained('lllyasviel/ControlNet')
+                    cnet_image = hed(init_image, scribble=True)
+                    del hed
+                    gc.collect()   
+                elif controlnet_type == "depth":
+                    depth_estimator = pipeline('depth-estimation')
+                    image = depth_estimator(init_image)['depth']
+                    image = np.array(image)
+                    image = image[:, :, None]
+                    image = np.concatenate([image, image, image], axis=2)
+                    cnet_image = PIL.Image.fromarray(image)
+                #cnet_image.save("./tmp.png")
+            start = time.time()
+            batch_images = pipe(
+                prompt,
+                negative_prompt=neg_prompt,
+                image=cnet_image,
+                height=height,
+                width=width,
+                num_inference_steps=steps,
+                guidance_scale=guidance_scale,
+                eta=eta,
+                num_images_per_prompt=batch_size,
+                generator=rng,
+                controlnet_conditioning_scale=conditioning_scale_t3,
+            ).images
+            finish = time.time()
 
         if current_pipe == "img2img" or "inpaint":
             steps = original_steps
@@ -221,6 +273,9 @@ def run_diffusers(
         if current_pipe == "img2img":
             info = info + f" denoise: {denoise_strength}"
             info_png = info_png + f" denoise: {denoise_strength}"
+        if current_pipe == controlnet:
+            info = info + f"controlnet: {controlnet_name}"
+            info_png = info_png + f"controlnet: {controlnet_name}"
         with open(os.path.join(output_path, "history.txt"), "a") as log:
             log.write(info + "\n")
 
@@ -453,10 +508,28 @@ def clear_click():
             seed_t2: "",
             fmt_t2: "png",
         }
+    elif current_tab == 3:
+        return {
+            prompt_t3: "",
+            neg_prompt_t3: "",
+            sch_t3: "PNDM",
+            preprocess_t3: False,
+            image_t3: None, 
+            iter_t3: 1,
+            batch_t3: 1,
+            steps_t3: 16,
+            guid_t3: 7.5,
+            height_t3: 512,
+            width_t3: 512,
+            eta_t3: 0.0,
+            seed_t3: "",
+            fmt_t3: "png",
+        }
 
 
 def generate_click(
     model_drop,
+    controlnet_drop,
     prompt_t0,
     neg_prompt_t0,
     sch_t0,
@@ -500,8 +573,24 @@ def generate_click(
     eta_t2,
     seed_t2,
     fmt_t2,
+    prompt_t3,
+    neg_prompt_t3,
+    image_t3,
+    sch_t3,
+    preprocess_t3,
+    conditioning_scale_t3,
+    iter_t3,
+    batch_t3,
+    steps_t3,
+    guid_t3,
+    height_t3,
+    width_t3,
+    eta_t3,
+    seed_t3,
+    fmt_t3,
 ):
     global model_name
+    global controlnet_name
     global provider
     global current_tab
     global current_pipe
@@ -509,7 +598,9 @@ def generate_click(
     global release_memory_after_generation
     global release_memory_on_change
     global scheduler
+    global controlnet_type
     global pipe
+    global controlnet
     global original_steps
 
     # reset scheduler and pipeline if model is different
@@ -519,6 +610,30 @@ def generate_click(
         pipe = None
         gc.collect()
     model_path = os.path.join("model", model_name)
+    
+    if controlnet_name != controlnet_drop:
+        controlnet_name = controlnet_drop
+        controlnet = None
+        gc.collect()
+    if controlnet_name != "default":
+        controlnet_path = os.path.join("controlnet", controlnet_name)
+        if "canny" in controlnet_name:
+            controlnet_type = "canny"
+        elif "openpose" in controlnet_name:
+            controlnet_type = "openpose"
+        elif "scribble" in controlnet_name:
+            controlnet_type = "scribble"
+        elif "depth" in controlnet_name:
+            controlnet_type = "depth"
+    else:
+        if "canny" in model_name:
+            controlnet_type = "canny"
+        elif "openpose" in model_name:
+            controlnet_type = "openpose"
+        elif "scribble" in model_name:
+            controlnet_type = "scribble"
+        elif "depth" in model_name:
+            controlnet_type = "depth"
 
     # select which scheduler depending on current tab
     if current_tab == 0:
@@ -527,6 +642,8 @@ def generate_click(
         sched_name = sch_t1
     elif current_tab == 2:
         sched_name = sch_t2
+    elif current_tab == 3:
+        sched_name = sch_t3
     else:
         raise Exception("Unknown tab")
 
@@ -550,9 +667,13 @@ def generate_click(
         scheduler = HeunDiscreteScheduler.from_pretrained(model_path, subfolder="scheduler")
     elif sched_name == "KDPM2" and type(scheduler) is not KDPM2DiscreteScheduler:
         scheduler = KDPM2DiscreteScheduler.from_pretrained(model_path, subfolder="scheduler")
+    elif sched_name == "UniPC" and type(scheduler) is not UniPCMultistepScheduler:
+        scheduler = UniPCMultistepScheduler.from_pretrained(model_path, subfolder="scheduler") 
 
     # select which pipeline depending on current tab
     if current_tab == 0:
+        controlnet = None
+        gc.collect()
         if current_pipe == ("img2img" or "inpaint") and release_memory_on_change:
             pipe = None
             gc.collect()
@@ -595,6 +716,8 @@ def generate_click(
                     scheduler=scheduler)
         current_pipe = "txt2img"
     elif current_tab == 1:
+        controlnet = None
+        gc.collect()
         if current_pipe == ("txt2img" or "inpaint") and release_memory_on_change:
             pipe = None
             gc.collect()
@@ -633,6 +756,8 @@ def generate_click(
                     scheduler=scheduler)
         current_pipe = "img2img"
     elif current_tab == 2:
+        controlnet = None
+        gc.collect()
         if current_pipe == ("txt2img" or "img2img") and release_memory_on_change:
             pipe = None
             gc.collect()
@@ -705,6 +830,70 @@ def generate_click(
                         scheduler=scheduler)
         current_pipe = "inpaint"
         current_legacy = legacy_t2
+    elif current_tab == 3:
+        disable_controlnet = False
+        if os.path.exists("./modules/pipeline_onnx_stable_diffusion_controlnet.py"):
+            if current_pipe != "controlnet" and release_memory_on_change:
+                pipe = None
+                gc.collect()
+            if current_pipe != "controlnet" or pipe is None:
+                if controlnet == None:
+                    if controlnet_name != "default":
+                        controlnet = OnnxRuntimeModel.from_pretrained(
+                            controlnet_path + "/controlnet", provider=provider)
+                    else:
+                        controlnet = OnnxRuntimeModel.from_pretrained(
+                            model_path + '/controlnet', provider=provider)
+                if textenc_on_cpu and vaedec_on_cpu:
+                    cputextenc = OnnxRuntimeModel.from_pretrained(
+                        model_path + "/text_encoder")
+                    cpuvaedec = OnnxRuntimeModel.from_pretrained(
+                        model_path + "/vae_decoder")
+                    pipe = OnnxStableDiffusionControlNetPipeline.from_pretrained(
+                        model_path,
+                        provider=provider,
+                        scheduler=scheduler,
+                        text_encoder=cputextenc,
+                        vae_decoder=cpuvaedec,
+                        controlnet=controlnet)
+                elif textenc_on_cpu:
+                    cputextenc = OnnxRuntimeModel.from_pretrained(
+                        model_path + "/text_encoder")
+                    pipe = OnnxStableDiffusionControlNetPipeline.from_pretrained(
+                        model_path,
+                        provider=provider,
+                        scheduler=scheduler,
+                        text_encoder=cputextenc,
+                        controlnet=controlnet)
+                elif vaedec_on_cpu:
+                    cpuvaedec = OnnxRuntimeModel.from_pretrained(
+                        model_path + "/vae_decoder")
+                    pipe = OnnxStableDiffusionControlNetPipeline.from_pretrained(
+                        model_path,
+                        provider=provider,
+                        scheduler=scheduler,
+                        vae_decoder=cpuvaedec,
+                        controlnet=controlnet)
+                else:
+                    pipe = OnnxStableDiffusionControlNetPipeline.from_pretrained(
+                        model_path,
+                        provider=provider,
+                        scheduler=scheduler,
+                        controlnet=controlnet)
+            else:
+                if controlnet == None:
+                    pipe.controlnet = None
+                    gc.collect()
+                    if controlnet_name != "default":
+                        controlnet = OnnxRuntimeModel.from_pretrained(
+                            controlnet_path + "/controlnet", provider=provider)
+                    else:
+                        controlnet = OnnxRuntimeModel.from_pretrained(
+                            model_path + '/controlnet', provider=provider)
+                    pipe.controlnet = controlnet
+        else:
+            disable_controlnet = True
+        current_pipe = "controlnet"
 
     # manual garbage collection
     gc.collect()
@@ -741,6 +930,7 @@ def generate_click(
             False,
             False,
             False,
+            False,
         )
     elif current_tab == 1:
         # input image resizing
@@ -769,6 +959,7 @@ def generate_click(
             False,
             False,
             loopback_t1,
+            False,
         )
     elif current_tab == 2:
         input_image = image_t2["image"].convert("RGB")
@@ -807,7 +998,35 @@ def generate_click(
             legacy_t2,
             savemask_t2,
             False,
+            False,
         )
+    elif current_tab == 3:
+        if disable_controlnet == False:
+            input_image = image_t3.convert("RGB")
+            input_image = resize_and_crop(input_image, height_t3, width_t3)
+            original_steps = steps_t3
+            
+            images, status = run_diffusers(
+                prompt_t3,
+                neg_prompt_t3,
+                input_image,
+                None,
+                iter_t3,
+                batch_t3,
+                steps_t3,
+                guid_t3,
+                height_t3,
+                width_t3,
+                eta_t3,
+                conditioning_scale_t3,
+                seed_t3,
+                fmt_t3,
+                False,
+                False,
+                False,
+                preprocess_t3,
+            )
+
 
     if release_memory_after_generation:
         pipe = None
@@ -829,6 +1048,10 @@ def select_tab1():
 def select_tab2():
     global current_tab
     current_tab = 2
+    
+def select_tab3():
+    global current_tab
+    current_tab = 3
 
 
 def choose_sch(sched_name: str):
@@ -864,6 +1087,7 @@ if __name__ == "__main__":
 
     # variables for ONNX pipelines
     model_name = None
+    controlnet_name = None
     provider = "CPUExecutionProvider" if args.cpu_only else "DmlExecutionProvider"
     current_tab = 0
     current_pipe = "txt2img"
@@ -876,9 +1100,11 @@ if __name__ == "__main__":
     # diffusers objects
     scheduler = None
     pipe = None
+    controlnet = None
 
     # check versions
     is_v_0_12 = version.parse(_df_version) >= version.parse("0.12.0")
+    is_v_0_14 = version.parse(_df_version) >= version.parse("0.14.0")
     is_v_dev = version.parse(_df_version).is_prerelease
 
     # prerelease version use warning
@@ -907,6 +1133,10 @@ if __name__ == "__main__":
             if entry.is_dir():
                 model_list.append(entry.name)
     default_model = model_list[0] if len(model_list) > 0 else None
+    
+    controlnet_visible = False
+    controlnet_list = ['default']
+    default_controlmodel = "default"
 
     if is_v_0_12:
         from diffusers import (
@@ -915,7 +1145,25 @@ if __name__ == "__main__":
             HeunDiscreteScheduler,
             KDPM2DiscreteScheduler
         )
-        sched_list = ["DPMS_ms", "DPMS_ss", "EulerA", "Euler", "DDIM", "LMS", "PNDM", "DEIS", "HEUN", "KDPM2"]
+        
+        if is_v_0_14:
+            if os.path.exists("./modules/pipeline_onnx_stable_diffusion_controlnet.py"):
+                controlnet_visible = True
+                if not os.path.isdir("./controlnet"):
+                    os.mkdir("./controlnet")
+                controlnet_dir = "controlnet"
+                with os.scandir(controlnet_dir) as scan_it:
+                    for entry in scan_it:
+                        if entry.is_dir():
+                            controlnet_list.append(entry.name)
+                default_controlmodel = controlnet_list[0] if len(controlnet_list) > 0 else None
+                from modules.pipeline_onnx_stable_diffusion_controlnet import OnnxStableDiffusionControlNetPipeline
+                from controlnet_aux import OpenposeDetector, HEDdetector
+                from transformers import pipeline
+            from diffusers import UniPCMultistepScheduler
+            sched_list = ["DPMS_ms", "DPMS_ss", "EulerA", "Euler", "DDIM", "LMS", "PNDM", "DEIS", "HEUN", "KDPM2", "UniPC"]
+        else:
+            sched_list = ["DPMS_ms", "DPMS_ss", "EulerA", "Euler", "DDIM", "LMS", "PNDM", "DEIS", "HEUN", "KDPM2"]
     else:
         sched_list = ["DPMS_ms", "EulerA", "Euler", "DDIM", "LMS", "PNDM"]
 
@@ -925,6 +1173,8 @@ if __name__ == "__main__":
         with gr.Row():
             with gr.Column(scale=13, min_width=650):
                 model_drop = gr.Dropdown(model_list, value=default_model, label="model folder", interactive=True)
+                controlnet_drop = gr.Dropdown(controlnet_list, value=default_controlmodel, 
+                    label="controlnet folder", interactive=True, visible=controlnet_visible)
             with gr.Column(scale=11, min_width=550):
                 with gr.Row():
                     gen_btn = gr.Button("Generate", variant="primary", elem_id="gen_button")
@@ -990,6 +1240,23 @@ if __name__ == "__main__":
                     eta_t2 = gr.Slider(0, 1, value=0.0, step=0.01, label="DDIM eta", interactive=False)
                     seed_t2 = gr.Textbox(value="", max_lines=1, label="seed")
                     fmt_t2 = gr.Radio(["png", "jpg"], value="png", label="image format")
+                with gr.Tab(label="controlnet") as tab3:
+                    prompt_t3 = gr.Textbox(value="", lines=2, label="prompt")
+                    neg_prompt_t3 = gr.Textbox(value="", lines=2, label="negative prompt")
+                    sch_t3 = gr.Radio(sched_list, value="PNDM", label="scheduler")
+                    preprocess_t3 = gr.Checkbox(value=False, label="Don't preprocess image")
+                    image_t3 = gr.Image(label="input image", type="pil", elem_id="image_init")
+                    with gr.Row():
+                        iter_t3 = gr.Slider(1, 24, value=1, step=1, label="iteration count")
+                        batch_t3 = gr.Slider(1, 1, value=1, step=1, label="batch size")
+                    steps_t3 = gr.Slider(1, 300, value=16, step=1, label="steps")
+                    guid_t3 = gr.Slider(0, 50, value=7.5, step=0.1, label="guidance")
+                    height_t3 = gr.Slider(192, 1536, value=512, step=64, label="height")
+                    width_t3 = gr.Slider(192, 1536, value=512, step=64, label="width")
+                    eta_t3 = gr.Slider(0, 1, value=0.0, step=0.01, label="DDIM eta", interactive=False)
+                    conditioning_scale_t3 = gr.Slider(0, 2, value=1.0, step=0.01, label="controlnet conditioning scale")
+                    seed_t3 = gr.Textbox(value="", max_lines=1, label="seed")
+                    fmt_t3 = gr.Radio(["png", "jpg"], value="png", label="image format")
             with gr.Column(scale=11, min_width=550):
                 image_out = gr.Gallery(value=None, label="output images")
                 status_out = gr.Textbox(value="", label="status")
@@ -1044,10 +1311,29 @@ if __name__ == "__main__":
             seed_t2,
             fmt_t2,
         ]
+        tab3_inputs = [
+            prompt_t3,
+            neg_prompt_t3,
+            image_t3,
+            sch_t3,
+            preprocess_t3,
+            conditioning_scale_t3,
+            iter_t3,
+            batch_t3,
+            steps_t3,
+            guid_t3,
+            height_t3,
+            width_t3,
+            eta_t3,
+            seed_t3,
+            fmt_t3,
+        ]
         all_inputs = [model_drop]
+        all_inputs.extend([controlnet_drop])
         all_inputs.extend(tab0_inputs)
         all_inputs.extend(tab1_inputs)
         all_inputs.extend(tab2_inputs)
+        all_inputs.extend(tab3_inputs)
 
         clear_btn.click(fn=clear_click, inputs=None, outputs=all_inputs, queue=False)
         gen_btn.click(fn=generate_click, inputs=all_inputs, outputs=[image_out, status_out])
@@ -1055,14 +1341,17 @@ if __name__ == "__main__":
         tab0.select(fn=select_tab0, inputs=None, outputs=None)
         tab1.select(fn=select_tab1, inputs=None, outputs=None)
         tab2.select(fn=select_tab2, inputs=None, outputs=None)
+        tab3.select(fn=select_tab3, inputs=None, outputs=None)
 
         sch_t0.change(fn=choose_sch, inputs=sch_t0, outputs=eta_t0, queue=False)
         sch_t1.change(fn=choose_sch, inputs=sch_t1, outputs=eta_t1, queue=False)
         sch_t2.change(fn=choose_sch, inputs=sch_t2, outputs=eta_t2, queue=False)
+        sch_t3.change(fn=choose_sch, inputs=sch_t3, outputs=eta_t3, queue=False)
 
         image_out.style(grid=2)
         image_t1.style(height=402)
         image_t2.style(height=402)
+        image_t3.style(height=402)
 
     # change the default temp folder and handle cleaning it when stopping the ui
     os.makedirs("temp", exist_ok=True)
