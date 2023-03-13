@@ -272,7 +272,7 @@ def run_diffusers(
         if current_pipe == "img2img":
             info = info + f" denoise: {denoise_strength}"
             info_png = info_png + f" denoise: {denoise_strength}"
-        if current_pipe == controlnet:
+        if current_pipe == "controlnet":
             info = info + f"controlnet: {controlnet_name}"
             info_png = info_png + f"controlnet: {controlnet_name}"
         with open(os.path.join(output_path, "history.txt"), "a") as log:
@@ -614,6 +614,7 @@ def generate_click(
         controlnet_name = controlnet_drop
         controlnet = None
         gc.collect()
+    controlnet_type = ""
     if controlnet_name != "default":
         controlnet_path = os.path.join("controlnet", controlnet_name)
         if "canny" in controlnet_name:
