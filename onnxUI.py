@@ -29,7 +29,6 @@ import gradio as gr
 import numpy as np
 from packaging import version
 import PIL
-from huggingface_hub import hf_hub_download
 
 import lpw_pipe
 
