@@ -10,4 +10,6 @@ OmegaConf
 spacy
 numpy<1.24
 accelerate
+opencv-python
+controlnet_aux
 protobuf<4

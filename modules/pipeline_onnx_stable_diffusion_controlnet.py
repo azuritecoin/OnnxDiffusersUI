@@ -172,7 +172,7 @@ class OnnxStableDiffusionControlNetPipeline(DiffusionPipeline):
 
 
         # scale the initial noise by the standard deviation required by the scheduler
-        latents = latents * self.scheduler.init_noise_sigma
+        latents = latents * np.float64(self.scheduler.init_noise_sigma)
         return latents
     # Copied from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion.StableDiffusionPipeline.prepare_extra_step_kwargs
     def prepare_extra_step_kwargs(self, generator, eta, torch_gen):
