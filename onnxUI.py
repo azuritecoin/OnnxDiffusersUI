@@ -196,6 +196,7 @@ def run_diffusers(
             if preprocess:
                 cnet_image=init_image
             else:
+                cnet_image=init_image
                 if controlnet_type == "canny":
                     image = np.array(init_image)
                     low_threshold = 100
@@ -222,6 +223,52 @@ def run_diffusers(
                     image = image[:, :, None]
                     image = np.concatenate([image, image, image], axis=2)
                     cnet_image = PIL.Image.fromarray(image)
+                elif controlnet_type == "hed":
+                    hed = HEDdetector.from_pretrained('lllyasviel/ControlNet')
+                    cnet_image = hed(init_image)
+                elif controlnet_type == "mlsd":
+                    mlsd = MLSDdetector.from_pretrained('lllyasviel/ControlNet')
+                    cnet_image = mlsd(init_image)
+                elif controlnet_type == "normal":
+                    depth_estimator = pipeline("depth-estimation", model ="Intel/dpt-hybrid-midas" )
+                    image = depth_estimator(init_image)['predicted_depth'][0]
+                    image = image.numpy()
+                    image_depth = image.copy()
+                    image_depth -= np.min(image_depth)
+                    image_depth /= np.max(image_depth)
+                    
+                    bg_threhold = 0.4
+                    
+                    x = cv2.Sobel(image, cv2.CV_32F, 1, 0, ksize=3)
+                    x[image_depth < bg_threhold] = 0
+                    
+                    y = cv2.Sobel(image, cv2.CV_32F, 0, 1, ksize=3)
+                    y[image_depth < bg_threhold] = 0
+                    z = np.ones_like(x) * np.pi * 2.0
+                    
+                    image = np.stack([x, y, z], axis=2)
+                    image /= np.sum(image ** 2.0, axis=2, keepdims=True) ** 0.5
+                    image = (image * 127.5 + 127.5).clip(0, 255).astype(np.uint8)
+                    cnet_image = PIL.Image.fromarray(image)
+                elif controlnet_type == "seg":
+                    image_processor = AutoImageProcessor.from_pretrained("openmmlab/upernet-convnext-small")
+                    image_segmentor = UperNetForSemanticSegmentation.from_pretrained("openmmlab/upernet-convnext-small")
+                    
+                    pixel_values = image_processor(init_image, return_tensors="pt").pixel_values
+                    outputs = image_segmentor(pixel_values)
+                    
+                    seg = image_processor.post_process_semantic_segmentation(outputs, target_sizes=[init_image.size[::-1]])[0]
+
+                    color_seg = np.zeros((seg.shape[0], seg.shape[1], 3), dtype=np.uint8) # height, width, 3
+
+                    palette = np.array(ade_palette())
+
+                    for label, color in enumerate(palette):
+                        color_seg[seg == label, :] = color
+
+                    color_seg = color_seg.astype(np.uint8)
+
+                    cnet_image = PIL.Image.fromarray(color_seg)
                 #cnet_image.save("./tmp.png")
             start = time.time()
             batch_images = pipe(
@@ -273,8 +320,8 @@ def run_diffusers(
             info = info + f" denoise: {denoise_strength}"
             info_png = info_png + f" denoise: {denoise_strength}"
         if current_pipe == "controlnet":
-            info = info + f"controlnet: {controlnet_name}"
-            info_png = info_png + f"controlnet: {controlnet_name}"
+            info = info + f" controlnet: {controlnet_name}"
+            info_png = info_png + f" controlnet: {controlnet_name}"
         with open(os.path.join(output_path, "history.txt"), "a") as log:
             log.write(info + "\n")
 
@@ -625,6 +672,14 @@ def generate_click(
             controlnet_type = "scribble"
         elif "depth" in controlnet_name:
             controlnet_type = "depth"
+        elif "mlsd" in controlnet_name:
+            controlnet_type = "mlsd"
+        elif "normal" in controlnet_name:
+            controlnet_type = "normal"
+        elif "seg" in controlnet_name:
+            controlnet_type = "seg"
+        elif "hed" in controlnet_name:
+            controlnet_type = "hed"
     else:
         if "canny" in model_name:
             controlnet_type = "canny"
@@ -634,6 +689,14 @@ def generate_click(
             controlnet_type = "scribble"
         elif "depth" in model_name:
             controlnet_type = "depth"
+        elif "mlsd" in controlnet_name:
+            controlnet_type = "mlsd"
+        elif "normal" in controlnet_name:
+            controlnet_type = "normal"
+        elif "seg" in controlnet_name:
+            controlnet_type = "seg"
+        elif "hed" in controlnet_name:
+            controlnet_type = "hed"
 
     # select which scheduler depending on current tab
     if current_tab == 0:
@@ -1158,8 +1221,9 @@ if __name__ == "__main__":
                             controlnet_list.append(entry.name)
                 default_controlmodel = controlnet_list[0] if len(controlnet_list) > 0 else None
                 from modules.pipeline_onnx_stable_diffusion_controlnet import OnnxStableDiffusionControlNetPipeline
-                from controlnet_aux import OpenposeDetector, HEDdetector
-                from transformers import pipeline
+                from controlnet_aux import OpenposeDetector, HEDdetector, MLSDdetector
+                from modules.controlnet_utils import ade_palette
+                from transformers import pipeline, AutoImageProcessor, UperNetForSemanticSegmentation
             from diffusers import UniPCMultistepScheduler
             sched_list = ["DPMS_ms", "DPMS_ss", "EulerA", "Euler", "DDIM", "LMS", "PNDM", "DEIS", "HEUN", "KDPM2", "UniPC"]
         else:
