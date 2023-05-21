@@ -1,5 +1,8 @@
 # OnnxDiffusersUI
 
+## NOTICE ##
+**This repo is no longer maintained and is out of date. Please check this fork of webui from lshqqytiger: https://github.com/lshqqytiger/stable-diffusion-webui-directml**
+
 I’ve been helping people setup Stable Diffusion and run it on their AMD graphics card (or CPU) on Windows. I’ve also wrote a basic UI for the diffusers library version to make it more user friendly. This guide is a consolidation of what I’ve learned and hopefully will help other people setup their PC to run Stable Diffusion too.
 
 The intent of this UI is to get people started running Stable Diffusion on Windows. As such this UI won't be as feature rich as other UI, nor will it be as fast as running Stable Diffusion on Linux and ROCm.
